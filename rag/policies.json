@@ -1,0 +1,23 @@
+
+{
+  "loanPolicies": [
+    {
+      "policyId": "LP001",
+      "minCreditScore": 650,
+      "maxLoanAmount": 50000,
+      "interestRateRange": {
+        "min": 3.5,
+        "max": 12.0
+      }
+    },
+    {
+      "policyId": "LP002",
+      "minCreditScore": 720,
+      "maxLoanAmount": 200000,
+      "interestRateRange": {
+        "min": 2.8,
+        "max": 9.5
+      }
+    }
+  ]
+}

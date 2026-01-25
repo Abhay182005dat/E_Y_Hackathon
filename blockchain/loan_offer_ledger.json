@@ -1,0 +1,136 @@
+[
+  {
+    "data": {
+      "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+      "offer": {
+        "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+        "loanAmount": 20000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "timestamp": "2025-12-15T09:37:29.315Z"
+    },
+    "previousHash": "0",
+    "hash": "56878c1205c4ff491dd09cdc30633382ce1dd1445c8f970fd909950e2792e56e"
+  },
+  {
+    "data": {
+      "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+      "offer": {
+        "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+        "loanAmount": 2000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "timestamp": "2025-12-15T13:01:33.831Z"
+    },
+    "previousHash": "56878c1205c4ff491dd09cdc30633382ce1dd1445c8f970fd909950e2792e56e",
+    "hash": "22f0b21743f6bf183770f5f64f380e875dad36241bc6d93ac5259d0fe819898e"
+  },
+  {
+    "data": {
+      "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+      "offer": {
+        "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmY4Gr3icvpPaX77CczTLAdS9h1kvMESq4wKwi9RntyCse",
+      "timestamp": "2025-12-15T16:44:46.646Z"
+    },
+    "previousHash": "22f0b21743f6bf183770f5f64f380e875dad36241bc6d93ac5259d0fe819898e",
+    "hash": "fe19efb850b040e566ba2003f207509c02194f71a9605d54498e6ff2d58987f8"
+  },
+  {
+    "data": {
+      "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+      "offer": {
+        "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+        "loanAmount": 120000,
+        "interestRate": 2.8,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmNcATJxyLFQ5xVYCdWGTTtBAiszQ8NgoNLfEEw4wiqNVv",
+      "timestamp": "2025-12-16T05:17:11.506Z"
+    },
+    "previousHash": "fe19efb850b040e566ba2003f207509c02194f71a9605d54498e6ff2d58987f8",
+    "hash": "bd2810248008e80317dec2c24f84508bd7b8d498c2c9b8c662773877e6d13262"
+  },
+  {
+    "data": {
+      "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+      "offer": {
+        "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmViR273AqrhRPzagof7AbmS5Wew2UyW2V1aFVAmdXjA8v",
+      "timestamp": "2025-12-16T05:28:05.971Z"
+    },
+    "previousHash": "bd2810248008e80317dec2c24f84508bd7b8d498c2c9b8c662773877e6d13262",
+    "hash": "79463f54afe66b97eabccf37b096f2d626fa644854413285a5de998f6aa5f1b6"
+  },
+  {
+    "data": {
+      "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+      "offer": {
+        "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmZpFcYczscsTVtiUJ2kuwcyLr3AtaFSRMv3JLZL36M6RD",
+      "timestamp": "2025-12-16T05:46:37.839Z"
+    },
+    "previousHash": "79463f54afe66b97eabccf37b096f2d626fa644854413285a5de998f6aa5f1b6",
+    "hash": "1cd92c5008d86fa815607d02d411df3c1fcb573d62a2f20c25220201aac73264"
+  },
+  {
+    "data": {
+      "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+      "offer": {
+        "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+        "loanAmount": null,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmRRhYheGwFKn9ASUK82bHT2eAghu8Ca9fQ6DAEVgK9bo1",
+      "timestamp": "2025-12-16T06:14:03.892Z"
+    },
+    "previousHash": "1cd92c5008d86fa815607d02d411df3c1fcb573d62a2f20c25220201aac73264",
+    "hash": "354e530bef2e0c656e0f44335350a304076cb869ab8c9883f305bd18c7f120f2"
+  },
+  {
+    "data": {
+      "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+      "offer": {
+        "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "status": "locked",
+      "cid": "QmemHb2cY1WAbjdoR2aFtTTst1hvLXYCgLrzF3kZ6inWKE",
+      "timestamp": "2025-12-16T07:04:46.570Z"
+    },
+    "previousHash": "354e530bef2e0c656e0f44335350a304076cb869ab8c9883f305bd18c7f120f2",
+    "hash": "d3a693fb1d61f5878f7eb434e54c447b4387a81441bbaecbcdeca3971c24fc28"
+  }
+]

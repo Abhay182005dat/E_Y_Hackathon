@@ -1,0 +1,165 @@
+[
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "4e06f5115ac7ecdbec11f206ea62fce1f1709ed3a64d582ffbd7b58d0c545de6",
+      "timestamp": "2025-12-15T09:37:29.301Z"
+    },
+    "previousHash": "0",
+    "hash": "b6e0bf506c244c28d779c38b496b782ae7dcdd57cf0dc98e501a3505c7f03302"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "b5f32aadbef6b2aec88d205967b438103cbeb491eee848501e14aabae32783d4",
+      "timestamp": "2025-12-15T13:01:33.828Z"
+    },
+    "previousHash": "b6e0bf506c244c28d779c38b496b782ae7dcdd57cf0dc98e501a3505c7f03302",
+    "hash": "c6b41c233a34bac1666b8612fb2ec490d3e393e23dad8d045c2baa067321654f"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "e1c0a7ca2e50356a624e0daa1b191cf5bf896df976e23c494569dd99f219d7e8",
+      "cid": "QmRttDAbF1U8TgjXwV1caxRyheiLPZ1PW16LNWSuzuprT3",
+      "timestamp": "2025-12-15T16:28:17.113Z"
+    },
+    "previousHash": "c6b41c233a34bac1666b8612fb2ec490d3e393e23dad8d045c2baa067321654f",
+    "hash": "0687db31bb8070672497ddee328f2982d2826d4de6487a7e4b919f3042cf4bb3"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "4d8dd297ef2dce2194143094b67736f2ab6c62cae049df2be4b44bf8ef75eed3",
+      "cid": "QmUaiMxb9ubRFZ31ysSiuGuGiRSLm8oBZ9QfbNuxYfoKe1",
+      "timestamp": "2025-12-15T16:30:52.045Z"
+    },
+    "previousHash": "0687db31bb8070672497ddee328f2982d2826d4de6487a7e4b919f3042cf4bb3",
+    "hash": "2f69632e346ff9c5972a13fd71af8737cfa51b4dc36840902576eeb4170ad274"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "22903dc36884ad42ec015922e7f9d54f9199c5f48e890910241561eb4fb3bec3",
+      "cid": "QmWuVgbi4pgNRTahxFC2WYrH6xetz6PNGsgo1jznpmcVKP",
+      "timestamp": "2025-12-15T16:31:32.467Z"
+    },
+    "previousHash": "2f69632e346ff9c5972a13fd71af8737cfa51b4dc36840902576eeb4170ad274",
+    "hash": "eb6f95d0a44e3a3127398cbee53321d979e5c07252529f01cfd8a7be5e173f32"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "c2f3a5bea216db2a114255c4e319d3576c1484a6fb30d45593b72de40ac09ff1",
+      "cid": "QmbvwC8UadYrX3jR2f9pzat4Z6m7hMUtKAvwoL1VjNQAqg",
+      "timestamp": "2025-12-15T16:34:04.931Z"
+    },
+    "previousHash": "eb6f95d0a44e3a3127398cbee53321d979e5c07252529f01cfd8a7be5e173f32",
+    "hash": "93c000e09f9283376c59bd37bd082bf20c36a6a894f99d5645fedff8e3208a6b"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "2606f40144d80e7ab24ca862a1602dfeff474490fd8cf47c19850ab97e215694",
+      "cid": "Qmd62KYxnoV3qoXTZ22Uebr9XXKEVV8grtRJknascd9crW",
+      "timestamp": "2025-12-15T16:36:34.515Z"
+    },
+    "previousHash": "93c000e09f9283376c59bd37bd082bf20c36a6a894f99d5645fedff8e3208a6b",
+    "hash": "449c69176836d04cbd2fc155b1c096de0aed9668ee7063e979fb3a7820f4cf53"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "b0281447f2eeaa81f76846897a024dd21e2e369faaecef6341434fa5a0a6e304",
+      "cid": "QmbZUnjvjcKXSCH2qMgGpUVSg23xkkrTPWSSpAZWrUmtUZ",
+      "timestamp": "2025-12-15T16:44:39.483Z"
+    },
+    "previousHash": "449c69176836d04cbd2fc155b1c096de0aed9668ee7063e979fb3a7820f4cf53",
+    "hash": "d9d0def1b74fd3a25185bf44dba12918b4cb6005307afbdc5b8dd3477c39587f"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "6beb2197692851fc5722808470fadf35c3d7c25a91af3439d4515fbfaad9cf1b",
+      "cid": "Qmag1fyEPfWyvXAfqkWMWgt6yXD88w6nAMcMmecsjaETyQ",
+      "timestamp": "2025-12-16T05:15:45.325Z"
+    },
+    "previousHash": "d9d0def1b74fd3a25185bf44dba12918b4cb6005307afbdc5b8dd3477c39587f",
+    "hash": "0f7c43003961428fe240cac74e0c5d2e7b0d63cbfecfc5f43d3389be4e1322b6"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "44b1b52a835d38fe99df055e4c5cffd9cee9bee08e43061ee73ddd2141c46dab",
+      "cid": "QmcE1EMDjkZbXzPG8Bh3JetUaV4AmFLVD7tdBScCWZ6iXQ",
+      "timestamp": "2025-12-16T05:16:13.358Z"
+    },
+    "previousHash": "0f7c43003961428fe240cac74e0c5d2e7b0d63cbfecfc5f43d3389be4e1322b6",
+    "hash": "63245ba399a46a71a06e4bd18e483de5a529ad96f57e4f38c1fed5df2bac72a2"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "1154ae3f1d5dd02022aa5ad53e38fd61d7ebd7f9ba1d012ea610058803f93774",
+      "cid": "QmaPSNv54Hen9js88Q6QiQTEJTBt7Fj9soqt6obWhV5ZTR",
+      "timestamp": "2025-12-16T05:27:56.212Z"
+    },
+    "previousHash": "63245ba399a46a71a06e4bd18e483de5a529ad96f57e4f38c1fed5df2bac72a2",
+    "hash": "42763de5861b3d8cdf047469fcbf54bee140b8a2534af94b20be461c5960fae6"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "16f61f6f7a19af02bead4e507783d883bb757856b8941f0de3714349329a3fa7",
+      "cid": "QmPsQpKaLKNKAw6Bi9RS7YmwbC7CNbgdRn99cqcGqrN78q",
+      "timestamp": "2025-12-16T05:46:26.306Z"
+    },
+    "previousHash": "42763de5861b3d8cdf047469fcbf54bee140b8a2534af94b20be461c5960fae6",
+    "hash": "1b19baf5bf14c9f3465346a58a94a155bf7e18b0f74ee4457713a2f7e1c65c7c"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "ee519afcfeadb38e89e2109ee3fb7622bb3726b9a961ff19d569f584b1e10da0",
+      "cid": "QmVapSU3tD8DyHSe3zM7FWAgVpZyBs6Ubr8oF4GoYQiT81",
+      "timestamp": "2025-12-16T06:13:56.085Z"
+    },
+    "previousHash": "1b19baf5bf14c9f3465346a58a94a155bf7e18b0f74ee4457713a2f7e1c65c7c",
+    "hash": "67fbeedf085e7b62ff7ccf6d9ee009caba9913c899348e4c0e4bd0f287a5d9ca"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "82b3a9515bb10f6b7bcf085244a141e08b2141996dd6cffd410ac9d4aaf1a5be",
+      "cid": "QmaFoyNQQ3xaUqZfniDymh5hXtPc2yqoEigTk6X5j78m7B",
+      "timestamp": "2025-12-16T06:31:10.942Z"
+    },
+    "previousHash": "67fbeedf085e7b62ff7ccf6d9ee009caba9913c899348e4c0e4bd0f287a5d9ca",
+    "hash": "97a8921dfdd5de7a296d266c05f684f22bc86d3d5d9cc030366f3abb2406569c"
+  },
+  {
+    "data": {
+      "agent": "creditAgent",
+      "action": "analyzeCredit",
+      "decisionHash": "5a3fde5e5562d0b07d109d29cdb43ad57ae89641806133bd122b3f09bd834205",
+      "cid": "QmRLNz9n5SBqTYax4aCoBJP25benDkZASuAJvwRyMZciKE",
+      "timestamp": "2025-12-16T07:04:37.744Z"
+    },
+    "previousHash": "97a8921dfdd5de7a296d266c05f684f22bc86d3d5d9cc030366f3abb2406569c",
+    "hash": "a963b13b3d38f00352c20a779840691e55b0b9f384f1344d05e5ef225ff68f2f"
+  }
+]

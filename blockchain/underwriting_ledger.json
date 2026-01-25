@@ -1,0 +1,186 @@
+[
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+        "loanAmount": 20000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "timestamp": "2025-12-15T09:37:29.302Z"
+    },
+    "previousHash": "0",
+    "hash": "669827a6b1d13bd78cba8a7aceaad278064c1628182a6e73f901f5cdeda0d020"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+        "loanAmount": 2000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "timestamp": "2025-12-15T13:01:33.830Z"
+    },
+    "previousHash": "669827a6b1d13bd78cba8a7aceaad278064c1628182a6e73f901f5cdeda0d020",
+    "hash": "82e17605eb43cd1c1b90943bddceda59dc0ad43b2635f926aff280218574577c"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "cd0564b88bafa27157042887b00a5f88d6cc85791e26ec091bf7cba9496c5adb",
+      "decision": "ineligible",
+      "cid": "QmNeKBWpGN3jhzZ9er1ZaNttaAPvgAEsg64SihikF1RwyN",
+      "timestamp": "2025-12-15T16:30:52.891Z"
+    },
+    "previousHash": "82e17605eb43cd1c1b90943bddceda59dc0ad43b2635f926aff280218574577c",
+    "hash": "0b5a4ee6eea40b57418fd72fc28e141d5c824299b34b0b74a3b4abae449baab8"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "2b9a9b55c40f8a7ff9ddddf3f69798a8be2b0a45d978ed7ea05ba64a7bb290e1",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "2b9a9b55c40f8a7ff9ddddf3f69798a8be2b0a45d978ed7ea05ba64a7bb290e1",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "QmQQU1SwbEmUPKpAu1qLuuj4UxLLE6XDgxJ2vP6DLLERH1",
+      "timestamp": "2025-12-15T16:34:08.900Z"
+    },
+    "previousHash": "0b5a4ee6eea40b57418fd72fc28e141d5c824299b34b0b74a3b4abae449baab8",
+    "hash": "a11f1ea6d26bff882402276cdd71d3af63a123176ceb44c1d321daab58533028"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "Qmc7odyH1ykMexGzsXtq9MmzbxmCG9y3UWRZK5vm9PM8Jo",
+      "timestamp": "2025-12-15T16:44:43.061Z"
+    },
+    "previousHash": "a11f1ea6d26bff882402276cdd71d3af63a123176ceb44c1d321daab58533028",
+    "hash": "e8aef6c519e712a796f401dd5a8e9b766de9721e13d89d186fea723d0bb35520"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "08c97bbeea073546c37716347ba65c92319e8e9ff116c6b5c459287760b6a780",
+      "decision": "ineligible",
+      "cid": "Qmah2RbHKAg9xRZE1jhGNoQAvYcAtFtR2FLPgMk98U9w9j",
+      "timestamp": "2025-12-16T05:15:46.036Z"
+    },
+    "previousHash": "e8aef6c519e712a796f401dd5a8e9b766de9721e13d89d186fea723d0bb35520",
+    "hash": "bc3efb7439d89ea5b3eeab56600d15ca0f4c8186aff253bd96961697e2afa79f"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+        "loanAmount": 120000,
+        "interestRate": 2.8,
+        "term": 36
+      },
+      "cid": "QmZ4S8Aani3WLEc3yMx2USLX1SLUWNd98W8rPzjah9Jzu1",
+      "timestamp": "2025-12-16T05:17:07.870Z"
+    },
+    "previousHash": "bc3efb7439d89ea5b3eeab56600d15ca0f4c8186aff253bd96961697e2afa79f",
+    "hash": "dbe41c69d414d11f14858c569819ec30bdd4dc2a8cca32ce23a91dc47bacd3d4"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "QmZQN7YN7C7ogb5xRKLbcAFtWC7PF38UVoJQupEVsh5NHm",
+      "timestamp": "2025-12-16T05:28:00.619Z"
+    },
+    "previousHash": "dbe41c69d414d11f14858c569819ec30bdd4dc2a8cca32ce23a91dc47bacd3d4",
+    "hash": "85192bc3fd5e87335f36b07d6af34656557a53205a8b604777fe40262f3cc56a"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "QmVUsGfoRqzzKNAUQ7TjEGQ5Z6UfxbdjKC5oQkkketN7DP",
+      "timestamp": "2025-12-16T05:46:33.926Z"
+    },
+    "previousHash": "85192bc3fd5e87335f36b07d6af34656557a53205a8b604777fe40262f3cc56a",
+    "hash": "c74f13f2f5bc6e6db5f6d4423dc2854909acc7cf0e4d6098e87a037640f181e8"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+        "loanAmount": null,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "QmTKhh3tjrMAk69s4dZsQQtQgpBPNwjBCYPwyGG3yLMLPE",
+      "timestamp": "2025-12-16T06:14:00.052Z"
+    },
+    "previousHash": "c74f13f2f5bc6e6db5f6d4423dc2854909acc7cf0e4d6098e87a037640f181e8",
+    "hash": "9597c63cf646e24d69cda69236327e09a5e427e447a18eaeb311bf5b769aa515"
+  },
+  {
+    "data": {
+      "agent": "underwritingAgent",
+      "action": "evaluateRiskAndPrice",
+      "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+      "decision": "eligible",
+      "offer": {
+        "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36
+      },
+      "cid": "QmeLzPEf1vocrENPvwctbEuimz24qAx6mAT4WMAmZ5BjmA",
+      "timestamp": "2025-12-16T07:04:41.395Z"
+    },
+    "previousHash": "9597c63cf646e24d69cda69236327e09a5e427e447a18eaeb311bf5b769aa515",
+    "hash": "71235951f1ad8fe7738ac7d4f92a75f5e9fa842cab812be8cb2c64a6e7aeaac1"
+  }
+]
