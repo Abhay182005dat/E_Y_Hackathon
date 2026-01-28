@@ -4,7 +4,7 @@ An AI-powered loan origination system with intelligent approval scoring, documen
 
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
-![License](https://img.shields.io/badge/License-MIT-blue)
+
 
 ---
 
@@ -179,9 +179,6 @@ Where:
 
 ---
 
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
