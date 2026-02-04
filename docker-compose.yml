@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Backend API (3 instances for load balancing)
+  backend-1:
+    build: .
+    container_name: bfsi-backend-1
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-2:
+    build: .
+    container_name: bfsi-backend-2
+    restart: unless-stopped
+    ports:
+      - "3002:3001"
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+
+  backend-3:
+    build: .
+    container_name: bfsi-backend-3
+    restart: unless-stopped
+    ports:
+      - "3003:3001"
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+
+  # Background Workers
+  worker-ocr:
+    build: .
+    container_name: bfsi-worker-ocr
+    restart: unless-stopped
+    command: node workers/ocrWorker.js
+    env_file:
+      - .env
+
+  worker-approval:
+    build: .
+    container_name: bfsi-worker-approval
+    restart: unless-stopped
+    command: node workers/approvalWorker.js
+    env_file:
+      - .env
+
+  # Load Balancer (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: bfsi-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
+      - backend-3
+
+networks:
+  default:
+    name: bfsi-network

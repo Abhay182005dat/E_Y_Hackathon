@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BFSI Loan Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>BFSI Loan System</h1>
+    </header>
+    <main>
+        <section id="loan-application">
+            <h2>Apply for Loan</h2>
+            <form id="loan-form">
+                <input type="text" id="user-message" placeholder="Type your loan request, e.g., 'I need a loan'" required>
+                <input type="text" id="name" placeholder="Full Name" required>
+                <input type="text" id="pan" placeholder="PAN Number" required>
+                <input type="text" id="aadhaar" placeholder="Aadhaar Number" required>
+                <div class="cibil-row">
+                    <input type="number" id="cibil" placeholder="CIBIL Score" required>
+                    <button type="button" id="cibil-random-btn" class="ghost-btn">get your cibil score from the bank </button>
+                </div>
+                <small id="cibil-hint" class="muted"></small>
+                <input type="number" id="income" placeholder="Monthly Income" required>
+                <select id="employment-type" required>
+                    <option value="" disabled selected>Employment Type</option>
+                    <option value="salaried">Salaried</option>
+                    <option value="self-employed">Self-Employed</option>
+                </select>
+                <input type="text" id="city" placeholder="City" required>
+                <input type="number" id="loan-amount" placeholder="Loan Amount" required>
+                <section id="docs-status">
+                    <h2>Documents & KYC</h2>
+                    <div class="file-row" id="identity-form">
+                        <label class="file-label">Upload PAN (img/pdf)
+                            <input type="file" id="pan-file" accept="image/*,.pdf" required>
+                        </label>
+                        <label class="file-label">Upload Aadhaar (img/pdf)
+                            <input type="file" id="aadhaar-file" accept="image/*,.pdf" required>
+                        </label>
+                        
+                    </div>
+                    <div id="identity-loader" class="inline-loader hidden" aria-live="polite">Verifying identity...</div>
+                    <div class="card-grid">
+                        <div class="card" id="card-pan">
+                            <p class="label">PAN OCR</p>
+                            <p class="value" id="pan-status">Pending</p>
+                            <p class="muted" id="pan-desc">Waiting for upload</p>
+                        </div>
+                        <div class="card" id="card-aadhaar">
+                            <p class="label">Aadhaar OCR</p>
+                            <p class="value" id="aadhaar-status">Pending</p>
+                            <p class="muted" id="aadhaar-desc">Waiting for upload</p>
+                        </div>
+                        <div class="card" id="card-bank">
+                            <p class="label">Bank Verification</p>
+                            <p class="value" id="bank-status">Pending</p>
+                            <p class="muted" id="bank-desc">Awaiting admin release</p>
+                        </div>
+                    </div>
+                </section>
+
+                <button type="submit" id="apply-btn">Submit Application</button>
+            </form>
+            <div id="loader" class="hidden"></div>
+        </section>
+
+        <section id="verification-status">
+            <h2>Verification Status</h2>
+            <div id="status-display">
+                <p>Submit the form to see verification status.</p>
+            </div>
+        </section>
+
+        
+        <section id="loan-result">
+            <h2>Loan Result</h2>
+            <div id="result-display">
+                <pre><code></code></pre>
+            </div>
+        </section>
+
+        <section id="disbursement" class="hidden">
+            <h2>Disbursement Tracker</h2>
+            <div class="disb-grid">
+                <div>
+                    <p class="label">Approved Amount</p>
+                    <p class="value" id="disb-amount">—</p>
+                </div>
+                <div>
+                    <p class="label">ETA to Bank</p>
+                    <p class="value" id="disb-eta">—</p>
+                </div>
+                <div>
+                    <p class="label">Monthly EMI (est.)</p>
+                    <p class="value" id="disb-emi">—</p>
+                </div>
+            </div>
+
+            <div class="progress-shell">
+                <div class="progress-bar" id="disb-progress"></div>
+            </div>
+            <p class="muted" id="disb-note">Funds are queued for release.</p>
+
+            <div class="emi-card" id="emi-card" aria-live="polite">
+                <div>
+                    <p class="label">Your EMI</p>
+                    <p class="emi-amount" id="emi-amount">—</p>
+                </div>
+                <div>
+                    <p class="label">Next Due</p>
+                    <p class="emi-due" id="emi-due">TBD (post-disbursement)</p>
+                </div>
+                <div>
+                    <p class="label">Status</p>
+                    <p class="emi-status" id="emi-status">Awaiting admin release</p>
+                </div>
+            </div>
+            <p class="muted" id="release-flag">Awaiting admin action.</p>
+        </section>
+
+        <section id="audit-trail" class="hidden">
+            <h2>Blockchain Audit Trail</h2>
+            <ul id="cid-list"></ul>
+        </section>
+
+        <section id="journey-overview">
+            <h2>End-to-End AI + Blockchain Flow</h2>
+            <div class="flow-grid">
+                <div>
+                    <p class="label">Customer to Smart Contract</p>
+                    <p class="muted">Customer intent → Master Agent orchestrates → Consent captured → KYC via Verification Agent → Credit + risk via Credit/Underwriting Agents → Smart contract auto-approval → Sanction letter → Disbursement → Monitoring.</p>
+                </div>
+                <div>
+                    <p class="label">Phases</p>
+                    <ol>
+                        <li>Entry & intent detection</li>
+                        <li>Data + consent capture</li>
+                        <li>KYC (PAN/Aadhaar OCR + API)</li>
+                        <li>Credit score & risk model</li>
+                        <li>Offer + negotiation</li>
+                        <li>Smart contract approval</li>
+                        <li>Sanction letter</li>
+                        <li>Disbursement</li>
+                        <li>Post-loan monitoring</li>
+                    </ol>
+                </div>
+                <div>
+                    <p class="label">Ledger Anchors</p>
+                    <ul>
+                        <li>Interaction & consent hashes</li>
+                        <li>Identity ledger for KYC proof</li>
+                        <li>Credit ledger for risk decisions</li>
+                        <li>Loan ledger for sanction/disbursement</li>
+                        <li>Payment ledger for EMI history</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

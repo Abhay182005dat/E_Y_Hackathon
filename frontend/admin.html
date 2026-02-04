@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Disbursement Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Admin Console</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Pending Disbursement</h2>
+            <div id="admin-state" class="muted">Waiting for latest loan approval...</div>
+
+            <div id="admin-disb" class="hidden">
+                <div class="disb-grid">
+                    <div>
+                        <p class="label">Recipient</p>
+                        <p class="value" id="admin-recipient">Session/User</p>
+                    </div>
+                    <div>
+                        <p class="label">Amount</p>
+                        <p class="value" id="admin-amount">—</p>
+                    </div>
+                    <div>
+                        <p class="label">ETA to Bank</p>
+                        <p class="value" id="admin-eta">—</p>
+                    </div>
+                </div>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <p class="label">Borrower</p>
+                        <p class="value" id="admin-user">—</p>
+                        <p class="muted" id="admin-city">—</p>
+                    </div>
+                    <div class="card">
+                        <p class="label">Income / CIBIL</p>
+                        <p class="value" id="admin-income">—</p>
+                        <p class="muted" id="admin-cibil">—</p>
+                    </div>
+                    <div class="card">
+                        <p class="label">Loan Status</p>
+                        <p class="value" id="admin-loan-status">—</p>
+                        <p class="muted" id="admin-risk">—</p>
+                    </div>
+                </div>
+
+                <div class="emi-card">
+                    <div>
+                        <p class="label">Monthly EMI</p>
+                        <p class="emi-amount" id="admin-emi">—</p>
+                    </div>
+                    <div>
+                        <p class="label">Next Due</p>
+                        <p class="emi-due" id="admin-due">TBD</p>
+                    </div>
+                    <div>
+                        <p class="label">Status</p>
+                        <p class="emi-status" id="admin-status">Awaiting release</p>
+                    </div>
+                </div>
+
+                <div class="progress-shell">
+                    <div class="progress-bar" id="admin-progress"></div>
+                </div>
+
+                <div class="disb-actions">
+                    <button type="button" id="admin-release">Release Funds</button>
+                    <button type="button" id="admin-reset" class="ghost-btn">Reset</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,798 @@
+[
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+      "intent": "loanApplication",
+      "timestamp": "2025-12-15T09:37:29.294Z"
+    },
+    "previousHash": "0",
+    "hash": "e015696bed015aef50a2c973baa50143e12583158bd9ee4b5f71cbc7eed73114"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+      "capturedData": {
+        "income": 80000,
+        "employmentType": "salaried",
+        "loanAmount": 20000,
+        "city": "San Francisco"
+      },
+      "timestamp": "2025-12-15T09:37:29.298Z"
+    },
+    "previousHash": "e015696bed015aef50a2c973baa50143e12583158bd9ee4b5f71cbc7eed73114",
+    "hash": "2ebfc4fbe34016d588ab1324f196cff623607a961c011eb6612efc4ae720ebbb"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+      "offer": {
+        "sessionId": "1ed0826aa8c7bcd8eb91a9e054b3c0e16bf264ea5293e8921db93823a54f429b",
+        "loanAmount": 20000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "timestamp": "2025-12-15T09:37:29.315Z"
+    },
+    "previousHash": "2ebfc4fbe34016d588ab1324f196cff623607a961c011eb6612efc4ae720ebbb",
+    "hash": "ad9db1e80dfd23487b2a0f53c5ee42ccdb8df44262a0cc70623552e9b656ca16"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+      "intent": "loanApplication",
+      "timestamp": "2025-12-15T13:01:33.818Z"
+    },
+    "previousHash": "ad9db1e80dfd23487b2a0f53c5ee42ccdb8df44262a0cc70623552e9b656ca16",
+    "hash": "9bd3d9906d9aa52dcfb6baf46dd09694805e99ca08bd8895aea8d1383575861b"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+      "capturedData": {
+        "income": 8000,
+        "employmentType": "salaried",
+        "loanAmount": 2000,
+        "city": "San Francisco"
+      },
+      "timestamp": "2025-12-15T13:01:33.822Z"
+    },
+    "previousHash": "9bd3d9906d9aa52dcfb6baf46dd09694805e99ca08bd8895aea8d1383575861b",
+    "hash": "fb82e67e2e9e90deafcdcb2795b46cbf9314e0a0263075ff0ff27439f3b295e6"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+      "offer": {
+        "sessionId": "635a4930c0eab1e61a8078734cda282914910cba105243f4037e76d2c7662185",
+        "loanAmount": 2000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "timestamp": "2025-12-15T13:01:33.831Z"
+    },
+    "previousHash": "fb82e67e2e9e90deafcdcb2795b46cbf9314e0a0263075ff0ff27439f3b295e6",
+    "hash": "55f4ef1777b4e2f791b9ad6677388bf5a6d7321eefdf168ba66d4911893aa0de"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "a709dc5f7e5f8eaebe1ea0cbaf4d2c6d65f579ac3856eba21360f39b0be2fbfd",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmNsHpjUoVoT2ido4CtcZEkQEvgZqt8X2CVg6k38aWjzh1",
+      "timestamp": "2025-12-15T16:15:22.272Z"
+    },
+    "previousHash": "55f4ef1777b4e2f791b9ad6677388bf5a6d7321eefdf168ba66d4911893aa0de",
+    "hash": "1ea1f3c96aae586d757a2cbf7d2fe45dd89b29de887082604a08ac356c18cbe8"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "a709dc5f7e5f8eaebe1ea0cbaf4d2c6d65f579ac3856eba21360f39b0be2fbfd",
+      "capturedData": {
+        "income": 50000,
+        "employmentType": "salaried",
+        "loanAmount": 50000,
+        "city": "mysuru"
+      },
+      "cid": "QmeX4GUEWXqGH2SPLmm1zNc4Vwobd3gFoupMsxgRYMSMbe",
+      "timestamp": "2025-12-15T16:15:24.833Z"
+    },
+    "previousHash": "1ea1f3c96aae586d757a2cbf7d2fe45dd89b29de887082604a08ac356c18cbe8",
+    "hash": "0cb0c57f69d12ae09cba5eea4a2dc9107648e4f3d03c6e6643e807c1a9244401"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "943747de22359e830cd82f0a3ae6b8df961265047c791d1486ea2624476eaa92",
+      "query": "I need loan",
+      "intent": "loanApplication",
+      "cid": "QmNZGq5fErimq5Pp7cCwvtzZDN1LpdrdguAUsR3agko8Y5",
+      "timestamp": "2025-12-15T16:19:55.176Z"
+    },
+    "previousHash": "0cb0c57f69d12ae09cba5eea4a2dc9107648e4f3d03c6e6643e807c1a9244401",
+    "hash": "60be057942595d44b087f70c057cb44eace416aaca5a37a31bea396e9730f67f"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "943747de22359e830cd82f0a3ae6b8df961265047c791d1486ea2624476eaa92",
+      "capturedData": {
+        "income": 90000000,
+        "employmentType": "self-employed",
+        "loanAmount": 3000000,
+        "city": "mysuru"
+      },
+      "cid": "QmevAzTXkLEd7R34LXFjF3bXCMSvwxQnAgJCGo2adRWXxV",
+      "timestamp": "2025-12-15T16:19:56.813Z"
+    },
+    "previousHash": "60be057942595d44b087f70c057cb44eace416aaca5a37a31bea396e9730f67f",
+    "hash": "f5c6ce75e39f71ff145a83ccd7a6d9fd61d35da0da5dad1d28561e1b1c0e16f9"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "9835dea0dfb4611e5da38a1ac2e88c586b82c910e79d5595af1c52105d92eff7",
+      "query": "I need loan",
+      "intent": "loanApplication",
+      "cid": "QmTrwGJ5kFn4UAcPPybWAPqNtnvc2orMeDDwGUANX6PbGV",
+      "timestamp": "2025-12-15T16:20:48.833Z"
+    },
+    "previousHash": "f5c6ce75e39f71ff145a83ccd7a6d9fd61d35da0da5dad1d28561e1b1c0e16f9",
+    "hash": "5ce419843d672f6e685171095613fb49d941bdc764361a4bf17d2daa6b2d4be2"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "9835dea0dfb4611e5da38a1ac2e88c586b82c910e79d5595af1c52105d92eff7",
+      "capturedData": {
+        "income": 90000000,
+        "employmentType": "self-employed",
+        "loanAmount": 3000000,
+        "city": "mysuru"
+      },
+      "cid": "QmR96mQgdZA6dRzweEW3LaVJNeV88KqYn9iT8fkCpEtWi7",
+      "timestamp": "2025-12-15T16:20:50.437Z"
+    },
+    "previousHash": "5ce419843d672f6e685171095613fb49d941bdc764361a4bf17d2daa6b2d4be2",
+    "hash": "09becae62680818a33fccc380cb357895f23a1e7566affa62aca98dcbb54483f"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "e99e8bba850f0f6031d90116881d5ac2884bff7ee8ee6c560dc317205cf9ab24",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmXrNLcvoBxXKzmRiSENEjeqAJPkrxndPNjC2tekRLzNpp",
+      "timestamp": "2025-12-15T16:22:44.558Z"
+    },
+    "previousHash": "09becae62680818a33fccc380cb357895f23a1e7566affa62aca98dcbb54483f",
+    "hash": "0308cd35f073d2ff61aa7588bb41d2aecf9a2b002e3b6383ba5c716acf75bc21"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "e99e8bba850f0f6031d90116881d5ac2884bff7ee8ee6c560dc317205cf9ab24",
+      "capturedData": {
+        "income": 90000000,
+        "employmentType": "self-employed",
+        "loanAmount": 1200000,
+        "city": "mysuru"
+      },
+      "cid": "QmdayXL8MQVV3ZVGF5oknRSvXv7HerD66DLgXs6mWMnSGy",
+      "timestamp": "2025-12-15T16:22:46.113Z"
+    },
+    "previousHash": "0308cd35f073d2ff61aa7588bb41d2aecf9a2b002e3b6383ba5c716acf75bc21",
+    "hash": "87f30b2222005ad2790a329d84276239a7f19f8a7813ec55f0e85618932e0542"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "47c45d13de772b5a5c03abe7e920c284fdaee951111cd75a58584e58086e21a3",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmahxCC7281C4iHujRzjaXYZbxBeDjkEHAcDZUeL5kBfyi",
+      "timestamp": "2025-12-15T16:24:48.770Z"
+    },
+    "previousHash": "87f30b2222005ad2790a329d84276239a7f19f8a7813ec55f0e85618932e0542",
+    "hash": "65baed9faab9d7ebcc5e8fbe21407797c02972058e6e73c7bfe00f92ac1b7252"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "47c45d13de772b5a5c03abe7e920c284fdaee951111cd75a58584e58086e21a3",
+      "capturedData": {
+        "income": 9000000,
+        "employmentType": "self-employed",
+        "loanAmount": 9000000,
+        "city": "mysuru"
+      },
+      "cid": "QmX6y9sMUVmDgnTnCup8BAWSy51i9EC3HiMcRHN6YjfeU9",
+      "timestamp": "2025-12-15T16:24:50.402Z"
+    },
+    "previousHash": "65baed9faab9d7ebcc5e8fbe21407797c02972058e6e73c7bfe00f92ac1b7252",
+    "hash": "94d284655d68d397542be76813f2187229c5fcb23738671b8fbe11141a9b0c7e"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "ca8748ae4c68177fef9e5027ac3b9cb713066245d2caf45a50a33130e465b30e",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmUqwH8fUJmWRuApUgbyu87gGehLWwhagtzWpGEJh88FCx",
+      "timestamp": "2025-12-15T16:25:56.812Z"
+    },
+    "previousHash": "94d284655d68d397542be76813f2187229c5fcb23738671b8fbe11141a9b0c7e",
+    "hash": "8a7cca771a43e4519645ec1a15a2365a46aa2598c53c64839b8e222e861cb0c5"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "ca8748ae4c68177fef9e5027ac3b9cb713066245d2caf45a50a33130e465b30e",
+      "capturedData": {
+        "income": 9000000,
+        "employmentType": "self-employed",
+        "loanAmount": 9000000,
+        "city": "mysuru"
+      },
+      "cid": "QmRqdjiaEYZY1YNBtEgppnRdYqzTExDh1e4m12GJaDxMs1",
+      "timestamp": "2025-12-15T16:25:58.570Z"
+    },
+    "previousHash": "8a7cca771a43e4519645ec1a15a2365a46aa2598c53c64839b8e222e861cb0c5",
+    "hash": "9a16f7858fe23b619a2ee756fee423b0307a7b41fc83b66d3d69c04d8ac0dce5"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "06ec65bd120351aace613436b37706bc8c3ed20215003c100aa271aa1b714295",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmS9xGNAHCHpZiTt95u2pWbx2AAgx2SD78qigJfRssTAY9",
+      "timestamp": "2025-12-15T16:28:03.384Z"
+    },
+    "previousHash": "9a16f7858fe23b619a2ee756fee423b0307a7b41fc83b66d3d69c04d8ac0dce5",
+    "hash": "642f33c6438b7ac0070ffcef14b6647dff020f10d16f2ac95a9bf4b9244b7865"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "06ec65bd120351aace613436b37706bc8c3ed20215003c100aa271aa1b714295",
+      "capturedData": {
+        "income": 9000000,
+        "employmentType": "self-employed",
+        "loanAmount": 9000000,
+        "city": "mysuru"
+      },
+      "cid": "QmSAVA8RsHBZ4Byr2RWXFkf6m3p1TQ9J2uYpVYhEJ4t2C3",
+      "timestamp": "2025-12-15T16:28:05.153Z"
+    },
+    "previousHash": "642f33c6438b7ac0070ffcef14b6647dff020f10d16f2ac95a9bf4b9244b7865",
+    "hash": "a9f8f9263ccc9b04d6a82215ece94aded4bccdc826defa97955813027f42a612"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "cd0564b88bafa27157042887b00a5f88d6cc85791e26ec091bf7cba9496c5adb",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmPv922PWmXPjt4xNBQqR7Q9S8bEXVYGeXaDPiubB36EGD",
+      "timestamp": "2025-12-15T16:30:43.998Z"
+    },
+    "previousHash": "a9f8f9263ccc9b04d6a82215ece94aded4bccdc826defa97955813027f42a612",
+    "hash": "2ff483e72a91a77d58075e9b1fed2b8c5509cc40cb12c6199d90aead4be3a8a5"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "cd0564b88bafa27157042887b00a5f88d6cc85791e26ec091bf7cba9496c5adb",
+      "capturedData": {
+        "income": 9000000,
+        "employmentType": "self-employed",
+        "loanAmount": 9000000,
+        "city": "mysuru"
+      },
+      "cid": "QmdAv41AWecXc8SrxVuz5oBRAd8A6ASZ7JYCUovQxf2hub",
+      "timestamp": "2025-12-15T16:30:45.440Z"
+    },
+    "previousHash": "2ff483e72a91a77d58075e9b1fed2b8c5509cc40cb12c6199d90aead4be3a8a5",
+    "hash": "c0f11bbaa66c34384ecb16982b909c77a0b81f69fc5e13aba5f5d32c0e74bcb3"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "bcd91cef50ec409becee2e1f1a6e6226f88345d2fe937f0ce3f2660277c4b6ac",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmVeG59GLEBx12Z9H3nUXfEdwArc6CHG1f9NL3B3TG9T8U",
+      "timestamp": "2025-12-15T16:31:19.746Z"
+    },
+    "previousHash": "c0f11bbaa66c34384ecb16982b909c77a0b81f69fc5e13aba5f5d32c0e74bcb3",
+    "hash": "e6d292575ec8f58bf836a3008517072ab860cecdd20278e3bdcc9cf6540a9995"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "bcd91cef50ec409becee2e1f1a6e6226f88345d2fe937f0ce3f2660277c4b6ac",
+      "capturedData": {
+        "income": 9000000,
+        "employmentType": "self-employed",
+        "loanAmount": 90000,
+        "city": "mysuru"
+      },
+      "cid": "QmbcSv7RPEVpCNWJuChZBp5waYARETHxKtPaKTKyZtrqxd",
+      "timestamp": "2025-12-15T16:31:21.465Z"
+    },
+    "previousHash": "e6d292575ec8f58bf836a3008517072ab860cecdd20278e3bdcc9cf6540a9995",
+    "hash": "cf905421db7a9bd771d8dbde214bfc7e4977e833144f92cf991452bd5846beda"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "2b9a9b55c40f8a7ff9ddddf3f69798a8be2b0a45d978ed7ea05ba64a7bb290e1",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmR7RKpLyG2r9Sm2e5JYFhWSQ1mKrWRzJKGK1rcs1ye5dc",
+      "timestamp": "2025-12-15T16:33:56.238Z"
+    },
+    "previousHash": "cf905421db7a9bd771d8dbde214bfc7e4977e833144f92cf991452bd5846beda",
+    "hash": "103d291218adc0796f8f87a5287e5941cfb21d3ac37ff9930085e71d2ccf5e20"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "2b9a9b55c40f8a7ff9ddddf3f69798a8be2b0a45d978ed7ea05ba64a7bb290e1",
+      "capturedData": {
+        "income": 12000000000000,
+        "employmentType": "self-employed",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmS9WAcPnuGfmDposYeePJKwg6Aam3u58Q2QgZsYVCLCRL",
+      "timestamp": "2025-12-15T16:33:57.626Z"
+    },
+    "previousHash": "103d291218adc0796f8f87a5287e5941cfb21d3ac37ff9930085e71d2ccf5e20",
+    "hash": "7036772dd9a986cf6c0904c2751cddde139a1cf0ce4308896099cee4f962ec67"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "ac6c6ce3cc8687b40669bb82febb1e01490ca2d06d85685be517183343f4e349",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmVaJ3wdxXcYzYJJfu123yV3TQL2aJxFwo4HNZfuhckPdL",
+      "timestamp": "2025-12-15T16:36:22.576Z"
+    },
+    "previousHash": "7036772dd9a986cf6c0904c2751cddde139a1cf0ce4308896099cee4f962ec67",
+    "hash": "5c8d06e35eee7d9e9a3901ecd498092c08aacc0a7037414348e9557018752e7b"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "ac6c6ce3cc8687b40669bb82febb1e01490ca2d06d85685be517183343f4e349",
+      "capturedData": {
+        "income": 12000000000,
+        "employmentType": "self-employed",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmRw8TzXyZhcy3N8EEgeksCSvr2Yisj9JL4D9JHXUTqGs9",
+      "timestamp": "2025-12-15T16:36:24.079Z"
+    },
+    "previousHash": "5c8d06e35eee7d9e9a3901ecd498092c08aacc0a7037414348e9557018752e7b",
+    "hash": "3d3a437495e703bb9ff63201eff06eac83f4f4a1d999bf9f00fff9ed7453c897"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "af279ed6d4ce51d07dbdaad5f900bcfc7c3b6c319c05b1405d752bb639d3928d",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmdFb8d7pFLAjMcu4bwx2u9nLdvuzbm89nNKLpjaWCishE",
+      "timestamp": "2025-12-15T16:42:15.316Z"
+    },
+    "previousHash": "3d3a437495e703bb9ff63201eff06eac83f4f4a1d999bf9f00fff9ed7453c897",
+    "hash": "bea30ad278866d1122696028d66907e731f890c7a175e1c90a16efcf9763c04c"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "af279ed6d4ce51d07dbdaad5f900bcfc7c3b6c319c05b1405d752bb639d3928d",
+      "capturedData": {
+        "income": 120000000000,
+        "employmentType": "salaried",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmYLYGj4NjhifjASoiXoLP2Nc7XD3CcUbp4bvL13yVGPkB",
+      "timestamp": "2025-12-15T16:42:16.914Z"
+    },
+    "previousHash": "bea30ad278866d1122696028d66907e731f890c7a175e1c90a16efcf9763c04c",
+    "hash": "21233d3b6623be60679bf583d6c8b39a22faf353994172889babaad01e627ee4"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmSBo2jV1jcffdnmBoKEUSQjpaoFQ7SGbQy1mNWwaBJzK6",
+      "timestamp": "2025-12-15T16:44:29.635Z"
+    },
+    "previousHash": "21233d3b6623be60679bf583d6c8b39a22faf353994172889babaad01e627ee4",
+    "hash": "2296691c96ad9087904b6c7783b4e7cb9406bb1414676f0b4971158949e6fa90"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+      "capturedData": {
+        "income": 120000000000,
+        "employmentType": "salaried",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmZGJzFXfD3zJG548uyNfGhrLibbpTdHJe92V8zeo5ceqg",
+      "timestamp": "2025-12-15T16:44:31.376Z"
+    },
+    "previousHash": "2296691c96ad9087904b6c7783b4e7cb9406bb1414676f0b4971158949e6fa90",
+    "hash": "68836fbd75d0323e48665ee380da568c0d247f2c809d1519b86b7969ccf5a55f"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+      "offer": {
+        "sessionId": "d6ed33393c441d40ec952025f393fbb73ae26bfc3757a29a4db5f738d359bf36",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmY9tcsaTgwVCKx1F3gefrJcB2HZmizdFyfGeWEdZgaciQ",
+      "timestamp": "2025-12-15T16:44:45.706Z"
+    },
+    "previousHash": "68836fbd75d0323e48665ee380da568c0d247f2c809d1519b86b7969ccf5a55f",
+    "hash": "7176bf0861b7bd5e19232850768408a47e1ae798815a601635d1acacb151c310"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "08c97bbeea073546c37716347ba65c92319e8e9ff116c6b5c459287760b6a780",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmT5kooaVrkyqyfMcs4svE16uHnddmTr1z9bGBcMLnaAU2",
+      "timestamp": "2025-12-16T05:15:35.607Z"
+    },
+    "previousHash": "7176bf0861b7bd5e19232850768408a47e1ae798815a601635d1acacb151c310",
+    "hash": "694a5fac05bd97c4b96079ed2ee4ea07433e8fd674be108ce93e175ae29d064a"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "08c97bbeea073546c37716347ba65c92319e8e9ff116c6b5c459287760b6a780",
+      "capturedData": {
+        "income": 700000000,
+        "employmentType": "self-employed",
+        "loanAmount": 120000,
+        "city": "mysuru"
+      },
+      "cid": "Qmcc2ux2DoXEBr8mG64aS4c9vmi131BhSxx8sEeTWtZjXr",
+      "timestamp": "2025-12-16T05:15:37.330Z"
+    },
+    "previousHash": "694a5fac05bd97c4b96079ed2ee4ea07433e8fd674be108ce93e175ae29d064a",
+    "hash": "ef42814ba9118363b0ef3a57bc8a4b4ec00151e4924ad0f7b9637327b5956fa0"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmeqNGPeCD3d5q71iX5zJ5JkNbBf6YUPsV6yMNV2Ups55c",
+      "timestamp": "2025-12-16T05:16:03.135Z"
+    },
+    "previousHash": "ef42814ba9118363b0ef3a57bc8a4b4ec00151e4924ad0f7b9637327b5956fa0",
+    "hash": "f6c9a48a860cef0b0c86461469ec0bd679a9c62b71922e4ec0afb43461a35773"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+      "capturedData": {
+        "income": 700000000,
+        "employmentType": "self-employed",
+        "loanAmount": 120000,
+        "city": "mysuru"
+      },
+      "cid": "QmNQZAjWPGqSn9Hp9sxe8Qs9ce3Zhc51vMCq1eoyUGV14A",
+      "timestamp": "2025-12-16T05:16:04.539Z"
+    },
+    "previousHash": "f6c9a48a860cef0b0c86461469ec0bd679a9c62b71922e4ec0afb43461a35773",
+    "hash": "9c36cf143ecd35bc3b2ea7c25d7b82ad6c147217f63bc0de10e7ed2b3a39080b"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+      "offer": {
+        "sessionId": "0dff6df0613eb1e63cdc2de09e5bf0c6783045af60ee0e32e5c94e4fb0c61331",
+        "loanAmount": 120000,
+        "interestRate": 2.8,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmVwNboqL7W5B4GhogEXJ5EyQhNNk61ozzN3Y9crdfrN6J",
+      "timestamp": "2025-12-16T05:17:10.665Z"
+    },
+    "previousHash": "9c36cf143ecd35bc3b2ea7c25d7b82ad6c147217f63bc0de10e7ed2b3a39080b",
+    "hash": "be7434028d026daaa4b3a42d1d92f383808a8aa3695246b7575b9026d43ad8d5"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmVZSkGVTxa5jnrQbHr2bhJBGdwBHM2oaWWV2zGMiaAdWp",
+      "timestamp": "2025-12-16T05:27:45.812Z"
+    },
+    "previousHash": "be7434028d026daaa4b3a42d1d92f383808a8aa3695246b7575b9026d43ad8d5",
+    "hash": "f8c931d5b3153a8b1ff67eda8584a92a42c760a81702a8c1f88347ca7ee05099"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+      "capturedData": {
+        "income": 1.2e+36,
+        "employmentType": "self-employed",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmbhWLjtDQbnnMKVhajupnYpN8QWN4PH3Z7rfL4idEBKhy",
+      "timestamp": "2025-12-16T05:27:47.233Z"
+    },
+    "previousHash": "f8c931d5b3153a8b1ff67eda8584a92a42c760a81702a8c1f88347ca7ee05099",
+    "hash": "ef93adf35a2099cc674ad69930ae0ef390328858e98f3353b448241e92e6ca7d"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+      "offer": {
+        "sessionId": "a023dfefbabb9e6ee41db73ec8e4f74da1d41ea9968a36687f4c59961c5ded6f",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmfWqoMKxTELoyRaNwL5d8gHCHAdX1HUNTZbzJHs4JAxxe",
+      "timestamp": "2025-12-16T05:28:05.176Z"
+    },
+    "previousHash": "ef93adf35a2099cc674ad69930ae0ef390328858e98f3353b448241e92e6ca7d",
+    "hash": "0e202a22ef3de749286e6538edd371e96bb9dc09b1cfa65e0ca69b9600f57654"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "Qmb2V9K2GfnYK2UTrsDZ4dH9NW6cNr4vAZ28kex7Fa6KX8",
+      "timestamp": "2025-12-16T05:46:18.258Z"
+    },
+    "previousHash": "0e202a22ef3de749286e6538edd371e96bb9dc09b1cfa65e0ca69b9600f57654",
+    "hash": "36c515c0cfafe46497e4cd6b98a619fcdb618caae162800fc1a079b72700ccff"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+      "capturedData": {
+        "income": 1.2e+32,
+        "employmentType": "self-employed",
+        "loanAmount": 12000,
+        "city": "mysuru"
+      },
+      "cid": "QmPvQMK9Kjm4aYQh2abG1rYJaozjmN5ea4HwEaCRmWc4jz",
+      "timestamp": "2025-12-16T05:46:19.843Z"
+    },
+    "previousHash": "36c515c0cfafe46497e4cd6b98a619fcdb618caae162800fc1a079b72700ccff",
+    "hash": "205d6b1eb5b8baeb39cb35773389f4d9183b6e521e22c9cf102ab15bde94db58"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+      "offer": {
+        "sessionId": "9ce81060ef992e209cd1b0815996504cf793b4349489673ce527abbb89b2e598",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmQjzfGcYRXXeEkjCNvjammMTjeUUN8svdAKjV26tDauaL",
+      "timestamp": "2025-12-16T05:46:37.034Z"
+    },
+    "previousHash": "205d6b1eb5b8baeb39cb35773389f4d9183b6e521e22c9cf102ab15bde94db58",
+    "hash": "b06ad89012bf95de12be8e1be47fc53fe2e0d2238ff583e34e29f1d4a69a23d6"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmQJKoWuCuxt9Wq7FJn1V73sppTbGUXJ578myKWod3gJxz",
+      "timestamp": "2025-12-16T06:13:47.447Z"
+    },
+    "previousHash": "b06ad89012bf95de12be8e1be47fc53fe2e0d2238ff583e34e29f1d4a69a23d6",
+    "hash": "d799e721de169aa9bd45741593794f326b4aa1bcaa363aec77d836125ed4aa77"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+      "capturedData": {
+        "income": null,
+        "employmentType": "",
+        "loanAmount": null,
+        "city": ""
+      },
+      "cid": "QmRkBhZeoEPu6cxmBtKfgG1NJ9VojVNRSMuRzb18EUDum1",
+      "timestamp": "2025-12-16T06:13:48.885Z"
+    },
+    "previousHash": "d799e721de169aa9bd45741593794f326b4aa1bcaa363aec77d836125ed4aa77",
+    "hash": "14de12d1fdbfd54cecda09a2f882aa65537e470cb63069ac813817dd1c7f3aa7"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+      "offer": {
+        "sessionId": "340723c17343f698b42e131749c9e45d5ca2c75791fa4942fa41ceb93951507e",
+        "loanAmount": null,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmcJRsWgr9c49Pau5Bp3eei7KUVz9KYQWpbgMeT36zsP78",
+      "timestamp": "2025-12-16T06:14:02.956Z"
+    },
+    "previousHash": "14de12d1fdbfd54cecda09a2f882aa65537e470cb63069ac813817dd1c7f3aa7",
+    "hash": "fb32bee2d581a05d1fb3d6787b8034b1126a4a4916c7ca480581dc219d9d8185"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "4823c430f9d64511f26c006612f94d83523a8db049d5d8e6fc40fc200c4b3690",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "QmVWmSi4h1GakFxjZxcz3FiGcXG1VLTiWYhwzCEH7agMWN",
+      "timestamp": "2025-12-16T06:31:01.288Z"
+    },
+    "previousHash": "fb32bee2d581a05d1fb3d6787b8034b1126a4a4916c7ca480581dc219d9d8185",
+    "hash": "37941ee44f9a1cc3301c5dcee9e6c45f2085d514b7e87ba1bee465e92b291e30"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "4823c430f9d64511f26c006612f94d83523a8db049d5d8e6fc40fc200c4b3690",
+      "capturedData": {
+        "income": null,
+        "employmentType": "",
+        "loanAmount": null,
+        "city": ""
+      },
+      "cid": "QmUeLfCRYNaur7peTVAqooLGxkQpKFDaGoRTnFirh8b2SM",
+      "timestamp": "2025-12-16T06:31:03.073Z"
+    },
+    "previousHash": "37941ee44f9a1cc3301c5dcee9e6c45f2085d514b7e87ba1bee465e92b291e30",
+    "hash": "d9e6e4f5e835b5799fe85ab47e9a08b713cbcba453081bc4bf3b2fbe2154d879"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "detectLoanIntent",
+      "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+      "query": "I need loan ",
+      "intent": "loanApplication",
+      "cid": "Qma7SgVWiRFNgS59YMuhjtvti9mNBPjcnUHNJ7PBo5SbaZ",
+      "timestamp": "2025-12-16T07:04:28.898Z"
+    },
+    "previousHash": "d9e6e4f5e835b5799fe85ab47e9a08b713cbcba453081bc4bf3b2fbe2154d879",
+    "hash": "76a3c57a4dbc1c815d4de6c29113e1374b8fe11929f8a1e2cd9bc7636dcf6142"
+  },
+  {
+    "data": {
+      "agent": "dataAgent",
+      "action": "captureData",
+      "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+      "capturedData": {
+        "income": 1.2e+35,
+        "employmentType": "self-employed",
+        "loanAmount": 12000,
+        "city": "mysore"
+      },
+      "cid": "QmYmxoeGjpLKrY7vEZ1pCyaeJK5LTqSi8ujoxhwpSt4o7L",
+      "timestamp": "2025-12-16T07:04:30.326Z"
+    },
+    "previousHash": "76a3c57a4dbc1c815d4de6c29113e1374b8fe11929f8a1e2cd9bc7636dcf6142",
+    "hash": "56244df083a97a96b0c475344cd2b715ca7f9ef592fca5eae09982678288fcba"
+  },
+  {
+    "data": {
+      "agent": "masterAgent",
+      "action": "presentAndNegotiateOffer",
+      "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+      "offer": {
+        "sessionId": "f33aaa4730c48a80b5563e599a57fe3cc737b3e5858a81d4b966edf60d53a2cc",
+        "loanAmount": 12000,
+        "interestRate": 3.5,
+        "term": 36,
+        "userResponse": "accepted"
+      },
+      "cid": "QmarKerC2BCbFsM1968iL6Gdths9UxazyP96p35u9mtuA9",
+      "timestamp": "2025-12-16T07:04:45.715Z"
+    },
+    "previousHash": "56244df083a97a96b0c475344cd2b715ca7f9ef592fca5eae09982678288fcba",
+    "hash": "bf5757965506c7668f3d94cb3e124a41dcfea369e75d2efa0431220c243f07f6"
+  }
+]
