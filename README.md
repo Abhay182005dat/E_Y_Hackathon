@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏦 BFSI Loan Platform
 
 An AI-powered loan origination system with intelligent approval scoring, document verification via OCR, and real-time EMI management.
@@ -303,3 +304,7 @@ Where:
 ---
 
 **Built with ❤️ for EY Techathon 2026**
+=======
+# 🌍 E&Y
+
+>>>>>>> 9a8e1ad574fb92cdfa04d847064611f468d30208
