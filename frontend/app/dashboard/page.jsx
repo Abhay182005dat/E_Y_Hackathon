@@ -7,6 +7,36 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+const gradientBackground = {
+    background: 'radial-gradient(circle at top, rgba(59,130,246,0.34), transparent 45%), linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 50%, rgba(2,6,23,0.9) 100%)',
+    minHeight: '100vh',
+    color: '#e2e8f0'
+};
+
+const statCardStyle = {
+    borderRadius: '24px',
+    padding: '24px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(56,189,248,0.08))',
+    boxShadow: '0 20px 40px rgba(15,23,42,0.55)'
+};
+
+const emiCardStyle = {
+    borderRadius: '28px',
+    padding: '24px 32px',
+    background: 'linear-gradient(135deg, rgba(16,185,129,0.65), rgba(5,150,105,0.25))',
+    border: '1px solid rgba(16,185,129,0.7)',
+    boxShadow: '0 30px 60px rgba(5,150,105,0.35)'
+};
+
+const tableHighlight = {
+    borderRadius: '28px',
+    padding: '24px',
+    background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(2,6,23,0.9))',
+    border: '1px solid rgba(59,130,246,0.4)',
+    boxShadow: '0 30px 80px rgba(2,6,23,0.6)'
+};
+
 export default function DashboardPage() {
     const { user, logout, loading } = useAuth();
     const router = useRouter();
@@ -84,11 +114,11 @@ export default function DashboardPage() {
 
     return (
         <>
-            <header className="header">
-                <nav className="nav container">
-                    <Link href="/dashboard" className="logo">🏦 BFSI User Portal</Link>
-                    <ul className="nav-links" style={{ alignItems: 'center' }}>
-                        <li>Hello, <strong>{user.name}</strong></li>
+            <header className="header" style={{ background: 'linear-gradient(135deg, rgba(2,6,23,0.8), rgba(15,23,42,0.95))', position: 'sticky', top: 0, zIndex: 20, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <nav className="nav container" style={{ background: 'transparent', padding: '24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Link href="/dashboard" className="logo" style={{ color: 'white' }}>🏦 BFSI User Portal</Link>
+                    <ul className="nav-links " style={{ alignItems: 'center' }}>
+                        <li style={{ color: 'white' }}>Hello, <strong>{user.name}</strong></li>
                         <li>
                             <button onClick={logout} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '14px' }}>
                                 Logout
@@ -98,15 +128,15 @@ export default function DashboardPage() {
                 </nav>
             </header>
 
-            <main className="container" style={{ padding: '40px 20px' }}>
+            <main className="container" style={{ padding: '40px 20px', ...gradientBackground }}>
                 {/* Welcome Section */}
                 <div className="mb-8" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                     <div>
-                        <h1 style={{ fontSize: '2.5rem', color: 'var(--primary)', marginBottom: '8px' }}>
+                        <h1 style={{ fontSize: '2.5rem', color: 'white', marginBottom: '8px' }}>
                             Welcome Back, {user.name.split(' ')[0]} 👋
                         </h1>
-                        <p style={{ color: 'var(--text-muted)' }}>
-                            Account: <span style={{ fontFamily: 'monospace', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>{user.accountNumber}</span>
+                        <p style={{ color: 'white' }}>
+                            Account: <span style={{ fontFamily: 'monospace', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#000' }}>{user.accountNumber}</span>
                         </p>
                     </div>
 
@@ -118,27 +148,27 @@ export default function DashboardPage() {
 
                 {/* Financial Summary Cards */}
                 <div className="grid-4 mb-8" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                    <div className="card">
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Active Applications</p>
-                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--warning)' }}>
+                    <div className="card" style={statCardStyle}>
+                        <p style={{ color: 'white', fontSize: '14px' }}>Active Applications</p>
+                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'white' }}>
                             {applications.filter(a => a.status === 'pending').length}
                         </p>
                     </div>
-                    <div className="card">
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Approval Score</p>
-                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--success)' }}>
+                    <div className="card" style={statCardStyle}>
+                        <p style={{ color: 'white', fontSize: '14px' }}>Approval Score</p>
+                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'white' }}>
                             {applications.length > 0 ? applications[applications.length - 1].approvalScore || '--' : '--'}
                         </p>
                     </div>
-                    <div className="card">
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Approved Loans</p>
-                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--secondary)' }}>
+                    <div className="card" style={statCardStyle}>
+                        <p style={{ color: 'white', fontSize: '14px' }}>Approved Loans</p>
+                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'white' }}>
                             {applications.filter(a => a.status === 'approved').length}
                         </p>
                     </div>
-                    <div className="card">
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Total Disbursed</p>
-                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--primary)' }}>
+                    <div className="card" style={statCardStyle}>
+                        <p style={{ color: 'white', fontSize: '14px' }}>Total Disbursed</p>
+                        <p style={{ fontSize: '28px', fontWeight: '700', color: 'white' }}>
                             ₹{applications.filter(a => a.status === 'approved').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
                         </p>
                     </div>
@@ -146,49 +176,41 @@ export default function DashboardPage() {
 
                 {/* EMI Reminder Card */}
                 {nextEMI && (
-                    <div className="card mb-8" style={{
-                        background: 'linear-gradient(135deg, var(--primary) 0%, #1e293b 100%)',
-                        color: '#fff',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '20px'
-                    }}>
+                    <div className="card mb-8" style={emiCardStyle}>
                         <div>
-                            <p style={{ fontSize: '14px', opacity: 0.8 }}>📅 Next EMI Payment</p>
-                            <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--accent)' }}>
+                            <p style={{ fontSize: '14px', opacity: 0.8, color: 'white' }}>📅 Next EMI Payment</p>
+                            <p style={{ fontSize: '28px', fontWeight: '700', color: 'white' }}>
                                 ₹{nextEMI.amount.toLocaleString()}
                             </p>
-                            <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                            <p style={{ fontSize: '14px', marginTop: '8px', color: 'white' }}>
                                 Due on <strong>{nextEMI.date}</strong> • Loan: {nextEMI.loanId}
                             </p>
                         </div>
                         <div style={{ textAlign: 'center' }}>
                             <div style={{
                                 fontSize: '48px', fontWeight: 'bold',
-                                color: nextEMI.daysLeft <= 7 ? 'var(--error)' : nextEMI.daysLeft <= 15 ? 'var(--warning)' : 'var(--success)'
+                                color: 'white'
                             }}>
                                 {nextEMI.daysLeft}
                             </div>
-                            <p style={{ fontSize: '14px', opacity: 0.8 }}>days left</p>
+                            <p style={{ fontSize: '14px', opacity: 0.8, color: 'white' }}>days left</p>
                         </div>
                     </div>
                 )}
 
                 {/* Recent Activity / Applications */}
-                <h2 className="mb-4" style={{ borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
+                <h2 className="mb-4" style={{ borderBottom: '2px solid var(--border)', paddingBottom: '10px', color: 'white' }}>
                     My Loan Applications
                 </h2>
 
-                <div className="card">
+                <div className="card" style={tableHighlight}>
                     {fetchLoading ? (
-                        <div className="text-center p-8">Loading applications...</div>
+                        <div className="text-center p-8" style={{ color: 'white' }}>Loading applications...</div>
                     ) : applications.length === 0 ? (
                         <div className="text-center" style={{ padding: '40px' }}>
                             <p style={{ fontSize: '48px', marginBottom: '16px' }}>📝</p>
-                            <h3>No Active Applications</h3>
-                            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+                            <h3 style={{ color: 'white' }}>No Active Applications</h3>
+                            <p style={{ color: 'white', marginBottom: '24px' }}>
                                 You haven't submitted any loan applications yet.
                             </p>
                             <Link href="/apply" className="btn btn-gold">
@@ -197,23 +219,23 @@ export default function DashboardPage() {
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px', color: 'white' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                                        <th style={{ padding: '16px' }}>Application ID</th>
-                                        <th style={{ padding: '16px' }}>Date</th>
-                                        <th style={{ padding: '16px' }}>Amount</th>
-                                        <th style={{ padding: '16px' }}>EMI</th>
-                                        <th style={{ padding: '16px' }}>Status</th>
+                                    <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.2)', textAlign: 'left' }}>
+                                        <th style={{ padding: '16px', color: 'white' }}>Application ID</th>
+                                        <th style={{ padding: '16px', color: 'white' }}>Date</th>
+                                        <th style={{ padding: '16px', color: 'white' }}>Amount</th>
+                                        <th style={{ padding: '16px', color: 'white' }}>EMI</th>
+                                        <th style={{ padding: '16px', color: 'white' }}>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {applications.map(app => (
                                         <tr key={app.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '16px', fontFamily: 'monospace' }}>{app.id}</td>
-                                            <td style={{ padding: '16px' }}>{new Date(app.submittedAt).toLocaleDateString()}</td>
-                                            <td style={{ padding: '16px', fontWeight: 'bold' }}>₹{app.amount.toLocaleString()}</td>
-                                            <td style={{ padding: '16px' }}>
+                                            <td style={{ padding: '16px', fontFamily: 'monospace', color: 'white' }}>{app.id}</td>
+                                            <td style={{ padding: '16px', color: 'white' }}>{new Date(app.submittedAt).toLocaleDateString()}</td>
+                                            <td style={{ padding: '16px', fontWeight: 'bold', color: 'white' }}>₹{app.amount.toLocaleString()}</td>
+                                            <td style={{ padding: '16px', color: 'white' }}>
                                                 {app.emi ? `₹${app.emi.toLocaleString()}/mo` : '-'}
                                             </td>
                                             <td style={{ padding: '16px' }}>{getStatusBadge(app.status)}</td>

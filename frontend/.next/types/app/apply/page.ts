@@ -1,4 +1,4 @@
-// File: C:\Users\HP\OneDrive\Desktop\ey-techathon\frontend\app\apply\page.jsx
+// File: F:\xyz\ey-techathonzip (1)\ey-techathon\frontend\app\apply\page.jsx
 import * as entry from '../../../../app/apply/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

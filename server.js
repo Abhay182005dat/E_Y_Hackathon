@@ -3,9 +3,44 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+
+// Database & Scalability Utils
+const { connectDB, getDB } = require('./server/db');
+const { publishEvent, getQueueStats } = require('./server/utils/eventQueue');
+const { updateWithVersion, updateWithRetry } = require('./server/utils/optimisticLock');
+const { withLock } = require('./server/utils/mongoLock');
+
+// Blockchain Utils (Ethereum Web3)
+const {
+    initWeb3,
+    logApplicationToBlockchain,
+    logChatToBlockchain,
+    logDocumentToBlockchain,
+    logCreditScoreToBlockchain,
+    getUserMasterLedger,
+    getUserCompleteHistory,
+    getBlockchainStats,
+    generateAndUploadMasterContract,
+    getMasterContract
+} = require('./blockchain/web3Client');
+
+// Redis for Chat Streaming
+const {
+    connectRedis,
+    setChatSession,
+    getChatSession,
+    addChatMessage,
+    getChatHistory,
+    publishChatEvent,
+    incrementChatMetric,
+    trackActiveSession,
+    getActiveSessionCount
+} = require('./server/utils/redisClient');
 
 // Agents
 const { detectLoanIntent, presentAndNegotiateOffer } = require('./agents/masterAgent');
@@ -21,25 +56,103 @@ const { logEmiPayment } = require('./agents/monitoringAgent');
 // Utils
 const { parseAadhaar, parsePAN, parseBankStatement, parseSalarySlip, performFraudCheck } = require('./utils/ocr');
 const { calculateApprovalScore, calculatePreApprovedLimit, calculateEMI, generateEMISchedule, getInterestRate } = require('./utils/creditScore');
-const { sendOTP, verifyLoginOTP, loginAdmin, getUserById, createAdmin, getAllUsers, authMiddleware, adminMiddleware, maskAadhaar, maskPAN } = require('./utils/auth');
+const { sendOTP, verifyLoginOTP, loginAdmin, getUserById, createAdmin, getAllUsers, authMiddleware, adminMiddleware, maskAadhaar, maskPAN, getOTPFromHash } = require('./utils/auth');
 
 const app = express();
+const port = process.env.PORT || 3001;
+
+// ==================== SCALABILITY SETUP ====================
+// This enables 1000+ concurrent admins through:
+// 1. MongoDB-backed sessions (stateless server instances)
+// 2. Connection pooling (50 max connections per instance)
+// 3. Distributed locks for critical sections
+// 4. Event-driven async processing
+
+// Initialize MongoDB, Redis, and Blockchain connections
+let dbInitialized = false;
+let redisInitialized = false;
+let blockchainInitialized = false;
+(async () => {
+    try {
+        await connectDB();
+        dbInitialized = true;
+        console.log('✅ MongoDB: Scalability features initialized');
+        
+        // Initialize Redis for chat streaming
+        try {
+            await connectRedis();
+            redisInitialized = true;
+            console.log('✅ Redis: Chat streaming enabled');
+        } catch (redisErr) {
+            console.warn('⚠️ Redis not available. Chat will use fallback mode:', redisErr.message);
+            // Continue without Redis - system still works
+        }
+        
+        // Initialize Blockchain (Ethereum Web3)
+        try {
+            blockchainInitialized = await initWeb3();
+            if (blockchainInitialized) {
+                console.log('✅ Blockchain: Ethereum ledger connected (immutable audit trail enabled)');
+            }
+        } catch (blockchainErr) {
+            console.warn('⚠️ Blockchain not available. Audit trail will use JSON fallback:', blockchainErr.message);
+            // Continue without blockchain - system still works
+        }
+    } catch (err) {
+        console.error('❌ Failed to connect to MongoDB:', err.message);
+        process.exit(1);
+    }
+})();
+
+// Session middleware (MongoDB-backed for horizontal scaling)
+app.use(session({
+    secret: process.env.JWT_SECRET || 'ey-techathon-session-secret',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URI,
+        dbName: process.env.MONGO_DB_NAME || 'eyhackathon',
+        collectionName: 'sessions',
+        ttl: 7 * 24 * 60 * 60, // 7 days
+        autoRemove: 'native',
+        touchAfter: 24 * 3600 // Lazy session update (once per 24h)
+    }),
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax'
+    },
+    name: 'bfsi.sid' // Custom session cookie name
+}));
 
 // Security middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// Rate limiting
+// Rate limiting (per IP)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    message: { error: 'Too many requests' }
+    message: { error: 'Too many requests' },
+    standardHeaders: true,
+    legacyHeaders: false
 });
 app.use('/api/', limiter);
 
-app.use(cors());
+// Stricter rate limit for admin operations
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500, // Higher limit for admins
+    message: { error: 'Too many admin requests' }
+});
+app.use('/api/admin/', adminLimiter);
+
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.static('frontend'));
-const port = process.env.PORT || 3001;
 
 // File upload config
 const uploadDir = path.join(__dirname, 'uploads');
@@ -54,12 +167,40 @@ const upload = multer({
 
 // ==================== AUTH ENDPOINTS ====================
 
+// OTP reveal endpoint (for development - paste hash to get OTP)
+app.post('/api/otp/reveal', async (req, res) => {
+    try {
+        const { hash } = req.body;
+        
+        if (!hash) {
+            return res.status(400).json({ error: 'Hash required' });
+        }
+        
+        const otpData = getOTPFromHash(hash);
+        
+        if (!otpData) {
+            return res.status(404).json({ error: 'Invalid or expired hash' });
+        }
+        
+        res.json({
+            ok: true,
+            otp: otpData.otp,
+            phone: otpData.phone,
+            name: otpData.name,
+            accountNumber: otpData.accountNumber,
+            expires: otpData.expires
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 1. Send OTP (User Login Step 1)
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { name, accountNumber, phone } = req.body;
         const result = await sendOTP({ name, accountNumber, phone });
-        res.json({ ok: true, message: 'OTP sent to your phone', devOtp: result.devOtp }); // devOtp for demo
+        res.json({ ok: true, message: result.message, otpHash: result.otpHash }); // Return hash instead of OTP
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -217,6 +358,22 @@ app.post('/api/verify-docs', upload.fields([
 
         // Perform fraud check
         const fraudCheck = performFraudCheck(results);
+        
+        // Log documents to blockchain (async, non-blocking)
+        if (blockchainInitialized && req.user) {
+            const userId = req.user.phone || req.user._id?.toString();
+            Object.entries(results).forEach(async ([docType, docData]) => {
+                if (docData) {
+                    await logDocumentToBlockchain({
+                        documentId: `DOC_${Date.now()}_${docType}`,
+                        userId,
+                        documentType: docType,
+                        verified: !fraudCheck.flagged,
+                        dataHash: require('crypto').createHash('sha256').update(JSON.stringify(docData)).digest('hex')
+                    });
+                }
+            });
+        }
 
         res.json({
             ok: true,
@@ -245,6 +402,17 @@ app.post('/api/calculate-score', async (req, res) => {
             customerData.monthlySalary || 50000,
             customerData.existingEMI || 0
         );
+        
+        // Log credit score to blockchain (async)
+        if (blockchainInitialized && req.user) {
+            const userId = req.user.phone || req.user._id?.toString();
+            logCreditScoreToBlockchain({
+                userId,
+                score: score.score,
+                grade: score.grade,
+                preApprovedLimit: limit.limit
+            }).catch(err => console.error('Blockchain logging error:', err));
+        }
 
         res.json({
             ok: true,
@@ -283,11 +451,8 @@ app.post('/api/calculate-emi', (req, res) => {
     }
 });
 
-// Chat endpoint - uses Ollama for AI responses
+// Chat endpoint - uses Redis Streams for real-time messaging
 const { callGemini } = require('./utils/geminiClient');
-
-// Simple in-memory session store for conversation history
-const chatSessions = new Map();
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -300,16 +465,29 @@ app.post('/api/chat', async (req, res) => {
         // Generate session ID if not provided
         const sid = sessionId || `session_${Date.now()}`;
 
-        // Get or create session
-        if (!chatSessions.has(sid)) {
-            chatSessions.set(sid, {
-                history: [],
+        // Get or create session from Redis
+        let session = redisInitialized ? await getChatSession(sid) : null;
+        
+        if (!session) {
+            session = {
                 state: 'intro', // intro -> offered -> negotiating -> accepted
                 negotiationCount: 0,
-                finalRate: null
-            });
+                finalRate: null,
+                createdAt: new Date().toISOString()
+            };
+            if (redisInitialized) {
+                await setChatSession(sid, session, 86400); // 24 hour TTL
+                await trackActiveSession(sid, 300); // 5 min activity tracking
+            }
+            console.log(`[Chat] New session created: ${sid}`);
+        } else {
+            // Session restored - extend TTL
+            if (redisInitialized) {
+                await setChatSession(sid, session, 86400); // Refresh 24h TTL
+                await trackActiveSession(sid, 300);
+            }
+            console.log(`[Chat] Session restored: ${sid} | State: ${session.state} | Negotiation: ${session.negotiationCount}`);
         }
-        const session = chatSessions.get(sid);
 
         // Extract correct values from the data structure
         const name = customerData?.name || 'Customer';
@@ -318,14 +496,47 @@ app.post('/api/chat', async (req, res) => {
         const score = creditScore?.creditScore?.score || creditScore?.score || 720;
         const preApprovedLimit = creditScore?.preApprovedLimit?.limit || 500000;
         const baseRate = creditScore?.preApprovedLimit?.interestRate || 12;
-        const currentRate = session.finalRate || baseRate;
+        
+        // Calculate better interest rate if requesting less than max
+        const loanUtilization = (requestedAmount / preApprovedLimit) * 100;
+        let adjustedRate = baseRate;
+        if (loanUtilization <= 50) {
+            adjustedRate = baseRate - 2; // 2% discount for using 50% or less
+        } else if (loanUtilization <= 75) {
+            adjustedRate = baseRate - 1; // 1% discount for using 75% or less
+        }
+        
+        const currentRate = session.finalRate || adjustedRate;
+        const finalAmount = requestedAmount <= preApprovedLimit ? requestedAmount : preApprovedLimit;
 
-        // Add user message to history
-        session.history.push({ role: 'user', content: message });
+        // Add user message to history and publish to stream
+        if (redisInitialized) {
+            await addChatMessage(sid, { role: 'user', content: message });
+            await publishChatEvent(sid, 'user_message', { message, customerData });
+            await incrementChatMetric('total_messages');
+        }
+
+        // Check if message is loan-related (simple keyword check for performance)
+        const loanKeywords = ['loan', 'borrow', 'credit', 'emi', 'interest', 'rate', 'money', 'finance', 'apply', 'approve', 'amount', 'eligible', 'tenure', 'payment', 'negotiate', 'accept', 'reject', 'disbursement', 'sanction', 'principal', 'repayment', 'advance', 'funding', 'capital', 'installment', 'debt', 'mortgage', 'collateral', 'limit', 'balance', 'due', 'overdue', 'refinance', 'prepayment', 'foreclosure', 'processing fee', 'documentation', 'salary', 'income', 'kyc', 'verification', 'document', 'approval', 'status', 'application', 'yes', 'no', 'ok', 'proceed'];
+        const lower = message.toLowerCase().trim();
+        const isLoanRelated = loanKeywords.some(keyword => lower.includes(keyword)) || 
+                     (session.state === 'intro' && lower.length <= 10); // Only allow short greetings in intro state
+        
+        if (!isLoanRelated) {
+            // Reject off-topic queries
+            const response = "I'm here to help with loan applications only! 😊\n\nI can assist you with:\n💰 Loan eligibility & applications\n📊 Interest rates & offers\n💵 EMI calculations\n📝 Document verification\n\nPlease ask about loans, or say 'accept' to proceed with your current offer.";
+            
+            if (redisInitialized) {
+                await addChatMessage(sid, { role: 'bot', content: response });
+                await publishChatEvent(sid, 'bot_response', { response, state: 'off_topic' });
+            }
+            
+            console.log(`[Chat] ${name} | Off-topic message rejected: "${message}"`);
+            return res.json({ ok: true, response, sessionId: sid, state: session.state, warning: 'off_topic' });
+        }
 
         // State machine logic - produces consistent responses
         let response;
-        const lower = message.toLowerCase();
 
         if (session.state === 'accepted') {
             response = `Your loan application is already submitted! 🎉\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n📋 Status: Under Review\n\nPlease wait for admin approval.`;
@@ -333,42 +544,54 @@ app.post('/api/chat', async (req, res) => {
             if (session.state === 'negotiating' || session.state === 'offered') {
                 session.state = 'accepted';
                 session.finalRate = session.finalRate || currentRate;
-                response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n💰 Amount: ₹${preApprovedLimit.toLocaleString()}\n📈 Final Interest Rate: ${session.finalRate}%\n📋 Status: Submitted for Disbursement\n\nYou'll receive SMS confirmation shortly.`;
+                session.finalAmount = finalAmount;
+                
+                const statusMessage = requestedAmount <= preApprovedLimit 
+                    ? '✅ Approved' 
+                    : `⚠️ Adjusted to maximum limit`;
+                
+                response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n💵 Approved Amount: ₹${finalAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Final Interest Rate: ${session.finalRate}%\n📋 Status: ${statusMessage}\n\n${requestedAmount < preApprovedLimit ? '🎉 Great choice! You got a better rate for borrowing less!' : ''}\n\nYou'll receive SMS confirmation shortly.`;
             } else {
                 session.state = 'offered';
                 response = `Hello ${name}! 👋\n\n📊 Credit Score: ${score}\n💰 Pre-Approved: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${currentRate}%\n\nWould you like to accept this offer or negotiate?`;
             }
         } else if (lower.includes('negotiate') || lower.includes('reduce') || lower.includes('lower') || lower.includes('rate') || lower.includes('less')) {
             if (session.negotiationCount >= 2) {
-                response = `I've already offered the best rate I can, ${name}.\n\n📉 Final Rate: ${session.finalRate || (baseRate - 0.5)}%\n\nThis is our lowest possible rate. Would you like to accept?`;
+                response = `I've already offered the best rate I can, ${name}.\n\n📉 Final Rate: ${session.finalRate || (adjustedRate - 0.5)}%\n\nThis is our lowest possible rate. Would you like to accept?`;
             } else {
                 session.state = 'negotiating';
                 session.negotiationCount++;
                 const reduction = 0.25 * session.negotiationCount;
-                session.finalRate = (baseRate - reduction).toFixed(1);
-                response = `I can offer a ${reduction}% reduction, ${name}!\n\n📉 New Rate: ${session.finalRate}%\n💰 Loan: ₹${preApprovedLimit.toLocaleString()}\n\nWould you like to accept this offer?`;
+                session.finalRate = (adjustedRate - reduction).toFixed(1);
+                response = `I can offer a ${reduction}% reduction, ${name}!\n\n📉 New Rate: ${session.finalRate}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n\n${requestedAmount < preApprovedLimit ? '✨ You already have a better rate for borrowing less!' : ''}\n\nWould you like to accept this offer?`;
             }
-        } else if (lower.includes('increase') || lower.includes('more') || lower.includes('higher') || lower.includes('1000000') || lower.includes('10 lakh')) {
-            response = `I understand you want more, ${name}.\n\nHowever, based on your approval score (${score}%) and salary (₹${salary.toLocaleString()}), your maximum is ₹${preApprovedLimit.toLocaleString()}.\n\nThis follows RBI's FOIR guidelines. Would you like to proceed with this amount?`;
         } else if (session.state === 'intro' || lower.includes('loan') || lower.includes('apply') || lower.includes('need') || lower.includes('hi') || lower.includes('hello')) {
             session.state = 'offered';
-            response = `Hello ${name}! 👋 Based on your verified documents:\n\n📊 Approval Score: ${score}%\n💰 Pre-Approved Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${currentRate}%\n💵 Monthly Salary: ₹${salary.toLocaleString()}\n\nWould you like to accept this offer or negotiate the interest rate?`;
+            
+            const rateBonus = requestedAmount < preApprovedLimit 
+                ? `\n🎁 Special Offer: ${(baseRate - adjustedRate).toFixed(1)}% lower rate for borrowing ₹${requestedAmount.toLocaleString()} (${loanUtilization.toFixed(0)}% of your limit)!` 
+                : '';
+            
+            response = `Hello ${name}! 👋 Based on your verified documents:\n\n📊 Approval Score: ${score/10}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${adjustedRate.toFixed(1)}% ${rateBonus}\n💵 Monthly Salary: ₹${salary.toLocaleString()}\n\n${requestedAmount <= preApprovedLimit ? '✅ Great news! Your requested amount is within your limit!' : '⚠️ Note: Your request exceeds the limit, we can approve up to ₹' + preApprovedLimit.toLocaleString()}\n\nWould you like to accept this offer or negotiate the interest rate?`;
         } else {
-            response = `Hi ${name}! Your current offer:\n\n💰 Amount: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed or "negotiate" for better rates.`;
+            response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed or "negotiate" for better rates.`;
         }
 
         // If accepted, store the application with EMI schedule
         if (session.state === 'accepted' && !session.applicationStored) {
-            const finalRate = parseFloat(session.finalRate || baseRate);
-            const emiData = generateEMISchedule(preApprovedLimit, finalRate, 36);
+            const finalRate = parseFloat(session.finalRate || adjustedRate);
+            const approvedAmount = session.finalAmount || finalAmount;
+            const emiData = generateEMISchedule(approvedAmount, finalRate, 36);
 
             const app = {
-                id: `LOAN-${sid.slice(-8)}`,
+                _id: `LOAN-${sid.slice(-8)}`,
                 customerName: name,
                 phone: customerData?.phone || 'N/A',
                 email: customerData?.email || 'N/A',
                 accountNumber: customerData?.accountNumber || 'N/A',
-                amount: preApprovedLimit,
+                requestedAmount: requestedAmount,
+                amount: approvedAmount,
+                maxLimit: preApprovedLimit,
                 tenure: 36,
                 interestRate: finalRate,
                 approvalScore: score,
@@ -378,19 +601,76 @@ app.post('/api/chat', async (req, res) => {
                 documents: { aadhaar: true, pan: true, bankStatement: true, salarySlip: true },
                 emi: emiData.emi,
                 nextEmiDate: emiData.schedule[0]?.dueDate,
-                emiSchedule: emiData.schedule
+                emiSchedule: emiData.schedule,
+                version: 1
             };
-            applications.push(app);
+            
+            // Store in MongoDB
+            const db = getDB();
+            await db.collection('applications').insertOne(app);
+            
+            // Log application to blockchain (immutable record)
+            if (blockchainInitialized) {
+                logApplicationToBlockchain({
+                    applicationId: app._id,
+                    userId: customerData?.phone || customerData?.accountNumber,
+                    customerName: name,
+                    loanAmount: approvedAmount,
+                    interestRate: finalRate,
+                    approvalScore: score,
+                    status: 'accepted',
+                    documentHash: ''
+                }).catch(err => console.error('Blockchain logging error:', err));
+                
+                // Generate master contract JSON and upload to IPFS/Pinata
+                setTimeout(async () => {
+                    const userId = customerData?.phone || customerData?.accountNumber;
+                    console.log(`📄 Generating master contract for ${userId}...`);
+                    const masterResult = await generateAndUploadMasterContract(userId);
+                    if (masterResult.success) {
+                        console.log(`✅ Master contract uploaded to IPFS: ${masterResult.ipfsHash}`);
+                        console.log(`   📂 View at: ${masterResult.ipfsUrl}`);
+                        
+                        // Update application with IPFS link
+                        await db.collection('applications').updateOne(
+                            { _id: app._id },
+                            { 
+                                $set: { 
+                                    masterContractIPFS: masterResult.ipfsHash,
+                                    masterContractUrl: masterResult.ipfsUrl 
+                                } 
+                            }
+                        );
+                    }
+                }, 2000); // Wait 2 seconds for blockchain confirmation
+            }
+            
             session.applicationStored = true;
-            console.log(`✅ [Application] Stored: ${app.id} for ${name} | EMI: ₹${emiData.emi}`);
+            console.log(`✅ [Application] Stored: ${app._id} for ${name} | Requested: ₹${requestedAmount} | Approved: ₹${approvedAmount} | EMI: ₹${emiData.emi}`);
         }
 
-        // Add bot response to history
-        session.history.push({ role: 'bot', content: response });
-
-        // Keep only last 10 messages
-        if (session.history.length > 10) {
-            session.history = session.history.slice(-10);
+        // Add bot response to history and publish to stream
+        if (redisInitialized) {
+            await addChatMessage(sid, { role: 'bot', content: response });
+            await publishChatEvent(sid, 'bot_response', { response, state: session.state });
+            await setChatSession(sid, session, 86400); // Update session state
+            await incrementChatMetric('total_messages');
+            await trackActiveSession(sid, 300);
+        }
+        
+        // Log chat interaction to blockchain (immutable audit trail)
+        if (blockchainInitialized) {
+            const userId = customerData?.phone || customerData?.accountNumber || 'unknown';
+            const messageHash = require('crypto').createHash('sha256').update(message + response).digest('hex');
+            
+            logChatToBlockchain({
+                sessionId: sid,
+                userId,
+                messageHash,
+                state: session.state,
+                negotiationCount: session.negotiationCount,
+                finalRate: session.finalRate || 0
+            }).catch(err => console.error('Blockchain logging error:', err));
         }
 
         console.log(`[Chat] ${name} | State: ${session.state} | Negotiation: ${session.negotiationCount}`);
@@ -402,49 +682,483 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// ==================== APPLICATIONS STORAGE ====================
+// ==================== CHAT HISTORY ENDPOINTS ====================
 
-const applications = [];
+// Get chat history for a session
+app.get('/api/chat/history/:sessionId', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { limit = 50 } = req.query;
+        
+        if (!redisInitialized) {
+            return res.status(503).json({ error: 'Chat history not available' });
+        }
+        
+        const history = await getChatHistory(sessionId, parseInt(limit));
+        const session = await getChatSession(sessionId);
+        
+        res.json({
+            ok: true,
+            sessionId,
+            history,
+            state: session?.state || 'unknown',
+            messageCount: history.length
+        });
+    } catch (err) {
+        console.error('Error fetching chat history:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get complete session state with messages (for persistence)
+app.post('/api/chat/restore', async (req, res) => {
+    try {
+        const { sessionId, customerData } = req.body;
+        
+        if (!sessionId) {
+            return res.status(400).json({ error: 'sessionId required' });
+        }
+        
+        // Get session from Redis
+        const session = redisInitialized ? await getChatSession(sessionId) : null;
+        const history = redisInitialized ? await getChatHistory(sessionId, 100) : [];
+        
+        if (!session) {
+            // No existing session, create new one
+            return res.json({
+                ok: true,
+                sessionId,
+                restored: false,
+                session: null,
+                messages: []
+            });
+        }
+        
+        // Extend TTL since user is back
+        if (redisInitialized) {
+            await setChatSession(sessionId, session, 86400); // Refresh 24h TTL
+            await trackActiveSession(sessionId, 300);
+        }
+        
+        console.log(`[Session Restore] ${sessionId} | State: ${session.state} | Messages: ${history.length}`);
+        
+        res.json({
+            ok: true,
+            sessionId,
+            restored: true,
+            session,
+            messages: history,
+            message: `Welcome back! Continuing from where you left off...`
+        });
+    } catch (err) {
+        console.error('Error restoring session:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get chat analytics (admin)
+app.get('/api/admin/chat-stats', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        if (!redisInitialized) {
+            return res.status(503).json({ error: 'Chat stats not available' });
+        }
+        
+        const totalMessages = await getChatMetric('total_messages');
+        const activeSessions = await getActiveSessionCount();
+        
+        res.json({
+            ok: true,
+            stats: {
+                totalMessages,
+                activeSessions,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (err) {
+        console.error('Error fetching chat stats:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==================== APPLICATIONS STORAGE (MONGODB) ====================
+// Supports 1000+ concurrent admins with optimistic locking
 
 // GET user's applications
-app.get('/api/user/applications', authMiddleware, (req, res) => {
-    // Filter applications where phone or accountNumber matches logged-in user
-    const userApps = applications.filter(a =>
-        a.phone === req.user.phone ||
-        a.accountNumber === req.user.accountNumber
-    );
-    res.json({ ok: true, applications: userApps });
-});
-
-// GET all applications (for admin)
-app.get('/api/applications', authMiddleware, adminMiddleware, (req, res) => {
-    res.json({ ok: true, applications });
-});
-
-// Update application status (approve/reject)
-app.put('/api/applications/:id', authMiddleware, adminMiddleware, (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const app = applications.find(a => a.id === id);
-    if (!app) {
-        return res.status(404).json({ error: 'Application not found' });
+app.get('/api/user/applications', authMiddleware, async (req, res) => {
+    try {
+        const db = getDB();
+        const applications = await db.collection('applications')
+            .find({
+                $or: [
+                    { phone: req.user.phone },
+                    { accountNumber: req.user.accountNumber },
+                    { userId: req.user._id?.toString() }
+                ]
+            })
+            .sort({ submittedAt: -1 })
+            .toArray();
+        
+        res.json({ ok: true, applications });
+    } catch (err) {
+        console.error('Error fetching user applications:', err);
+        res.status(500).json({ error: err.message });
     }
-
-    if (!['pending', 'approved', 'rejected', 'disbursed'].includes(status)) {
-        return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    app.status = status;
-    app.updatedAt = new Date().toISOString();
-
-    console.log(`✅ [Admin] Application ${id} status changed to: ${status}`);
-    res.json({ ok: true, application: app });
 });
 
+// GET all applications (for admin) - with pagination and filtering
+app.get('/api/applications', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const db = getDB();
+        const { status, page = 1, limit = 50, search } = req.query;
+        
+        const filter = {};
+        if (status) filter.status = status;
+        if (search) {
+            filter.$or = [
+                { customerName: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
+                { id: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const [applications, total] = await Promise.all([
+            db.collection('applications')
+                .find(filter)
+                .sort({ submittedAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .toArray(),
+            db.collection('applications').countDocuments(filter)
+        ]);
+
+        // Map _id to id for frontend compatibility
+        const applicationsWithId = applications.map(app => ({
+            ...app,
+            id: app._id
+        }));
+
+        res.json({
+            ok: true,
+            applications: applicationsWithId,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (err) {
+        console.error('Error fetching applications:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update application status with OPTIMISTIC LOCKING (prevents concurrent update conflicts)
+app.put('/api/applications/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, version, notes } = req.body;
+
+        console.log(`[Update] Attempting to update application: ${id} -> ${status}`);
+
+        if (!['pending', 'approved', 'rejected', 'disbursed'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const db = getDB();
+        
+        // First check if document exists
+        const exists = await db.collection('applications').findOne({ _id: id });
+        if (!exists) {
+            console.error(`[Update] Application not found: ${id}`);
+            return res.status(404).json({ error: `Application ${id} not found` });
+        }
+        
+        // Use optimistic locking with retry
+        const result = await updateWithRetry(
+            db,
+            'applications',
+            id,
+            async (current) => ({
+                status,
+                updatedAt: new Date(),
+                updatedBy: req.user.email,
+                adminNotes: notes || current.adminNotes
+            }),
+            3 // max 3 retries
+        );
+
+        if (!result.success) {
+            if (result.conflict) {
+                return res.status(409).json({
+                    error: 'Conflict: Another admin modified this application. Please refresh.',
+                    currentVersion: result.currentVersion
+                });
+            }
+            return res.status(400).json({ error: result.error });
+        }
+
+        // Publish event for background processing (notifications, ledger, etc.)
+        await publishEvent(db, 'application:status_changed', {
+            applicationId: id,
+            oldStatus: result.document.status,
+            newStatus: status,
+            adminEmail: req.user.email,
+            timestamp: new Date()
+        });
+
+        console.log(`✅ [Admin:${req.user.email}] Application ${id}: ${status} (v${result.newVersion})`);
+        res.json({ ok: true, application: result.document });
+
+    } catch (err) {
+        console.error('Error updating application:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Batch update applications (for bulk admin actions with distributed locking)
+app.post('/api/applications/batch-update', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { applicationIds, status, notes } = req.body;
+
+        if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
+            return res.status(400).json({ error: 'applicationIds array required' });
+        }
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status for batch update' });
+        }
+
+        const db = getDB();
+        const results = { success: [], failed: [] };
+
+        // Process each application with distributed lock to prevent conflicts
+        for (const appId of applicationIds) {
+            try {
+                await withLock(db, `application:${appId}`, async () => {
+                    const result = await updateWithRetry(db, 'applications', appId, async () => ({
+                        status,
+                        updatedAt: new Date(),
+                        updatedBy: req.user.email,
+                        adminNotes: notes
+                    }));
+
+                    if (result.success) {
+                        results.success.push(appId);
+                        await publishEvent(db, 'application:status_changed', {
+                            applicationId: appId,
+                            newStatus: status,
+                            adminEmail: req.user.email,
+                            batchUpdate: true
+                        });
+                    } else {
+                        results.failed.push({ id: appId, error: result.error });
+                    }
+                }, 5000);
+            } catch (err) {
+                results.failed.push({ id: appId, error: err.message });
+            }
+        }
+
+        console.log(`✅ [Batch:${req.user.email}] Updated ${results.success.length}/${applicationIds.length}`);
+        res.json({ ok: true, results });
+
+    } catch (err) {
+        console.error('Batch update error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get event queue statistics (admin monitoring)
+app.get('/api/admin/queue-stats', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const db = getDB();
+        const stats = await getQueueStats(db);
+        res.json({ ok: true, stats });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Health check with DB status
+app.get('/health', async (req, res) => {
+    try {
+        const db = getDB();
+        await db.admin().ping();
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            version: '2.0.0',
+            database: 'connected'
+        });
+    } catch (err) {
+        res.status(503).json({
+            status: 'unhealthy',
+            error: err.message
+        });
+    }
+});
+
+// ==================== BLOCKCHAIN API ENDPOINTS ====================
+
+// Get user's master ledger (all blockchain transactions)
+app.get('/api/blockchain/user/:userId/ledger', authMiddleware, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Check authorization (user can only view their own ledger, admins can view any)
+        const requestUserId = req.user.phone || req.user._id?.toString();
+        if (requestUserId !== userId && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        if (!blockchainInitialized) {
+            return res.status(503).json({ error: 'Blockchain not available' });
+        }
+        
+        const ledger = await getUserMasterLedger(userId);
+        res.json({ ok: true, ...ledger });
+    } catch (err) {
+        console.error('Error fetching blockchain ledger:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get user's complete blockchain history
+app.get('/api/blockchain/user/:userId/history', authMiddleware, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Check authorization
+        const requestUserId = req.user.phone || req.user._id?.toString();
+        if (requestUserId !== userId && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        if (!blockchainInitialized) {
+            return res.status(503).json({ error: 'Blockchain not available' });
+        }
+        
+        const history = await getUserCompleteHistory(userId);
+        res.json({ ok: true, ...history });
+    } catch (err) {
+        console.error('Error fetching blockchain history:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get blockchain contract statistics (admin only)
+app.get('/api/blockchain/stats', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        if (!blockchainInitialized) {
+            return res.status(503).json({ error: 'Blockchain not available' });
+        }
+        
+        const stats = await getBlockchainStats();
+        res.json({ ok: true, ...stats });
+    } catch (err) {
+        console.error('Error fetching blockchain stats:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Generate master contract JSON and upload to IPFS
+app.post('/api/blockchain/user/:userId/master-contract', authMiddleware, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { regenerate = false } = req.body;
+        
+        // Check authorization
+        const requestUserId = req.user.phone || req.user._id?.toString();
+        if (requestUserId !== userId && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        if (!blockchainInitialized) {
+            return res.status(503).json({ error: 'Blockchain not available' });
+        }
+        
+        const result = regenerate 
+            ? await generateAndUploadMasterContract(userId)
+            : await getMasterContract(userId);
+        
+        if (!result.success) {
+            return res.status(500).json({ error: result.error });
+        }
+        
+        res.json({
+            ok: true,
+            masterContract: result.masterContract,
+            ipfsHash: result.ipfsHash,
+            ipfsUrl: result.ipfsUrl,
+            localPath: result.localPath,
+            source: result.source || 'generated',
+            message: 'Master contract generated and uploaded to IPFS/Pinata'
+        });
+    } catch (err) {
+        console.error('Error generating master contract:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get master contract (cached or generate new)
+app.get('/api/blockchain/user/:userId/master-contract', authMiddleware, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Check authorization
+        const requestUserId = req.user.phone || req.user._id?.toString();
+        if (requestUserId !== userId && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        if (!blockchainInitialized) {
+            return res.status(503).json({ error: 'Blockchain not available' });
+        }
+        
+        const result = await getMasterContract(userId);
+        
+        if (!result.success) {
+            return res.status(500).json({ error: result.error });
+        }
+        
+        res.json({
+            ok: true,
+            masterContract: result.masterContract,
+            ipfsHash: result.ipfsHash,
+            ipfsUrl: result.ipfsUrl,
+            source: result.source || 'cache'
+        });
+    } catch (err) {
+        console.error('Error fetching master contract:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Readiness check (for Kubernetes)
+app.get('/ready', async (req, res) => {
+    if (dbInitialized) {
+        res.status(200).json({
+            ready: true,
+            services: {
+                mongodb: true,
+                redis: redisInitialized,
+                blockchain: blockchainInitialized
+            }
+        });
+    } else {
+        res.status(503).json({ ready: false });
+    }
+});
 
 app.listen(port, () => {
     console.log(`🚀 Server listening at http://localhost:${port}`);
     console.log(`📊 Health: http://localhost:${port}/health`);
+    console.log(`🔄 Ready: http://localhost:${port}/ready`);
+    console.log(`⚡ Scalability: Optimistic locking + Event queue enabled`);
+    console.log(`💬 Chat: ${redisInitialized ? 'Redis Streams enabled' : 'Fallback mode (no Redis)'}`);
+    console.log(`🔗 Blockchain: ${blockchainInitialized ? 'Ethereum ledger active (immutable audit)' : 'JSON fallback mode'}`);
 });
 

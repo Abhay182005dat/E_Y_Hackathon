@@ -1,0 +1,35 @@
+{
+  "version": "2.0",
+  "architecture": "Modular Blockchain",
+  "userId": "+919876543210",
+  "userIdHash": "0xf3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+  "generated": "2026-02-05T17:49:53.298Z",
+  "blockchain": {
+    "network": "SEPOLIA",
+    "loanCoreAddress": "0x342773f4f8d0614287EdF221c884Dcee84a29928",
+    "creditRegistryAddress": "0x62C93f5E4E3d22fD6336CB0aEA99e0C87A6B47aD",
+    "paymentLedgerAddress": "0xd314fB3A9367909F5Da1Ad221b75daF6AFDf3785",
+    "explorerUrl": "https://sepolia.etherscan.io/address/0x342773f4f8d0614287EdF221c884Dcee84a29928"
+  },
+  "summary": {
+    "totalLoans": 0,
+    "totalChats": 0,
+    "totalDocuments": 0,
+    "totalCredits": 0,
+    "totalDisbursements": 0,
+    "totalEMIs": 0
+  },
+  "transactions": {
+    "loans": [],
+    "chatLogs": [],
+    "documents": [],
+    "creditHistory": [],
+    "disbursements": [],
+    "emis": []
+  },
+  "verification": {
+    "note": "All hashes use keccak256. Full data stored off-chain (MongoDB + IPFS)",
+    "blockchainProof": "Verify on-chain at explorer URLs above",
+    "architecture": "Production-grade modular contracts with hash-based storage"
+  }
+}

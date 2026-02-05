@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Reveal Page - BFSI Secure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 120px;
+            transition: all 0.3s;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .result h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result .otp-display {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 8px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .result .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .result .info-label {
+            font-weight: 600;
+        }
+
+        .copy-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .icon {
+            font-size: 24px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .warning strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 OTP Reveal Page</h1>
+            <p>Paste the SHA-256 hash from server console to reveal OTP</p>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Security Notice:</strong>
+            This page is for development/testing only. Never expose OTPs in production environments.
+        </div>
+
+        <div class="input-group">
+            <label for="hashInput">SHA-256 Hash from Console:</label>
+            <textarea 
+                id="hashInput" 
+                placeholder="Paste the hash here (64 hexadecimal characters)&#10;Example: a3f8b9c2d1e5f4a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+            ></textarea>
+        </div>
+
+        <button class="btn" id="revealBtn">🔓 Reveal OTP</button>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const hashInput = document.getElementById('hashInput');
+        const revealBtn = document.getElementById('revealBtn');
+        const result = document.getElementById('result');
+
+        revealBtn.addEventListener('click', async () => {
+            const hash = hashInput.value.trim();
+
+            if (!hash) {
+                showError('Please paste the hash from console');
+                return;
+            }
+
+            // Validate hash format (SHA-256 = 64 hex chars)
+            if (!/^[a-f0-9]{64}$/i.test(hash)) {
+                showError('Invalid hash format. SHA-256 hash must be 64 hexadecimal characters.');
+                return;
+            }
+
+            revealBtn.disabled = true;
+            revealBtn.textContent = '🔄 Retrieving...';
+
+            try {
+                const response = await fetch(`/api/otp/reveal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hash })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.otp) {
+                    showSuccess(data);
+                } else {
+                    showError(data.error || 'Invalid or expired hash');
+                }
+            } catch (err) {
+                showError('Failed to connect to server: ' + err.message);
+            } finally {
+                revealBtn.disabled = false;
+                revealBtn.textContent = '🔓 Reveal OTP';
+            }
+        });
+
+        function showSuccess(data) {
+            result.className = 'result success';
+            result.style.display = 'block';
+            result.innerHTML = `
+                <h3><span class="icon">✅</span> OTP Retrieved Successfully</h3>
+                <div class="otp-display">${data.otp}</div>
+                <div class="info-row">
+                    <span class="info-label">📱 Phone:</span>
+                    <span>${data.phone}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">👤 Name:</span>
+                    <span>${data.name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">🏦 Account:</span>
+                    <span>${data.accountNumber}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⏰ Expires At:</span>
+                    <span>${new Date(data.expires).toLocaleString()}</span>
+                </div>
+                <button class="copy-btn" onclick="copyOTP('${data.otp}')">📋 Copy OTP</button>
+            `;
+        }
+
+        function showError(message) {
+            result.className = 'result error';
+            result.style.display = 'block';
+            result.innerHTML = `
+                <h3><span class="icon">❌</span> Error</h3>
+                <p>${message}</p>
+            `;
+        }
+
+        function copyOTP(otp) {
+            navigator.clipboard.writeText(otp).then(() => {
+                alert('✅ OTP copied to clipboard: ' + otp);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                alert('OTP: ' + otp);
+            });
+        }
+
+        // Allow Enter key to submit
+        hashInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                revealBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

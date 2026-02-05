@@ -22,18 +22,24 @@ function parseJsonResponse(rawResponse, label) {
 }
 
 async function detectLoanIntent(query, existingSessionId) {
-    const prompt = `Analyze this user query and determine the intent. Query: "${query}"
+    const prompt = `You are a banking loan assistant. Analyze if this query is related to LOANS, BANKING, CREDIT, or FINANCIAL services.
 
-Respond with EXACTLY ONE word from this list: loanApplication, loanStatus, generalInquiry, unknown
+Query: "${query}"
 
-Do not add any explanation, punctuation, or extra text. Just the single word.`;
+Respond with EXACTLY ONE word:
+- "loanApplication" if asking to apply for a loan, borrow money, or get financing
+- "loanStatus" if asking about existing loan status, payments, EMI
+- "generalInquiry" if asking general questions about loan terms, eligibility, interest rates
+- "offtopic" if the query is completely unrelated to banking/loans (like: weather, sports, jokes, cooking, etc.)
+
+Respond with ONLY ONE WORD. No explanation.`;
     const intentResult = await callGemini(prompt);
     const intent = intentResult.trim().toLowerCase().replace(/[^a-z]/g, '');
     const sessionId = existingSessionId || sha256(query + Date.now());
 
     // Validate intent is one of the expected values
-    const validIntents = ['loanapplication', 'loanstatus', 'generalinquiry', 'unknown'];
-    const finalIntent = validIntents.includes(intent) ? intent : 'unknown';
+    const validIntents = ['loanapplication', 'loanstatus', 'generalinquiry', 'offtopic'];
+    const finalIntent = validIntents.includes(intent) ? intent : 'offtopic';
 
     const interaction = {
         agent: 'masterAgent',

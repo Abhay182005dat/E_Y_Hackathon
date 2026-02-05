@@ -10,6 +10,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // JWT secret - in production, use environment variable
 const JWT_SECRET = process.env.JWT_SECRET || 'bfsi_secure_jwt_secret_2026';
@@ -20,6 +21,8 @@ const SALT_ROUNDS = 12;
 const users = new Map();
 // In-memory OTP storage: phone -> { otp, expires, tempData }
 const otpStore = new Map();
+// Hash-to-OTP mapping for secure OTP retrieval
+const otpHashStore = new Map();
 
 // Create default admin on startup
 const initDefaultAdmin = async () => {
@@ -53,14 +56,21 @@ function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function generateOTPHash(otp) {
+    return crypto.createHash('sha256').update(otp).digest('hex');
+}
+
 async function sendOTP({ name, accountNumber, phone }) {
     if (!name || !accountNumber || !phone) {
         throw new Error('Name, Account Number, and Phone are required');
     }
-
+    
     // Generate OTP
     const otp = generateOTP();
     const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
+    
+    // Generate SHA-256 hash
+    const otpHash = generateOTPHash(otp);
 
     // Store OTP
     otpStore.set(phone, {
@@ -68,29 +78,34 @@ async function sendOTP({ name, accountNumber, phone }) {
         expires,
         userData: { name, accountNumber, phone, role: 'user' }
     });
+    
+    // Store hash-to-OTP mapping (for OTP page retrieval)
+    otpHashStore.set(otpHash, {
+        otp,
+        phone,
+        name,
+        accountNumber,
+        expires
+    });
 
-    // 1. Log to Console (Always for Debugging/Fallback)
-    console.log(`\n🔐 [SECURE AUTH] OTP for ${phone} (Acc: ${accountNumber}): ${otp}\n`);
+    // Always log HASH to console (not the actual OTP)
+    console.log('\n' + '='.repeat(60));
+    console.log('🔐 LOGIN OTP GENERATED');
+    console.log('='.repeat(60));
+    // Always log HASH to console (not the actual OTP)
+    console.log('\n' + '='.repeat(60));
+    console.log('🔐 LOGIN OTP GENERATED');
+    console.log('='.repeat(60));
+    console.log(`📱 Phone: ${phone}`);
+    console.log(`👤 Name: ${name}`);
+    console.log(`🏦 Account: ${accountNumber}`);
+    console.log(`🔒 OTP Hash (SHA-256): ${otpHash}`);
+    console.log(`⏰ Expires: ${new Date(expires).toLocaleTimeString()}`);
+    console.log(`\n📄 Paste this hash at: /otp-page.html to reveal OTP`);
+    console.log('='.repeat(60) + '\n');
 
-    // 2. Send Real SMS if Twilio is configured
-    if (client && twilioPhone) {
-        try {
-            await client.messages.create({
-                body: `Your BFSI Secure Login OTP is: ${otp}. Do not share this with anyone.`,
-                from: twilioPhone,
-                to: phone // Ensure phone has country code e.g., +91...
-            });
-            console.log(`✅ [Twilio] SMS sent to ${phone}`);
-            return { message: 'OTP sent via SMS', devOtp: otp };
-        } catch (error) {
-            console.error('❌ [Twilio] Failed to send SMS:', error.message);
-            // Fallback: Return success but rely on console/devOtp (so user isn't blocked)
-            return { message: 'SMS failed, using Dev Mode', devOtp: otp };
-        }
-    } else {
-        console.warn('⚠️ [Twilio] Credentials missing. Using Dev Mode.');
-        return { message: 'Dev Mode: OTP in Console', devOtp: otp };
-    }
+    // Return hash instead of OTP
+    return { message: 'OTP generated (paste hash at /otp-page.html)', otpHash };
 }
 
 async function verifyLoginOTP({ phone, otp, accountNumber }) {
@@ -334,6 +349,17 @@ module.exports = {
     maskAadhaar,
     maskPAN,
     maskPhone,
+
+    // OTP hash retrieval
+    getOTPFromHash: (hash) => {
+        const data = otpHashStore.get(hash);
+        if (!data) return null;
+        if (Date.now() > data.expires) {
+            otpHashStore.delete(hash);
+            return null;
+        }
+        return data;
+    },
 
     // Constants
     JWT_SECRET

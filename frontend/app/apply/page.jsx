@@ -7,6 +7,226 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+const chatCardStyle = {
+    borderRadius: '28px',
+    background: 'radial-gradient(circle at top left, rgba(14,165,233,0.35), rgba(15,23,42,0.95))',
+    border: '1px solid rgba(59,130,246,0.3)',
+    boxShadow: '0 35px 65px rgba(15,23,42,0.55)',
+    overflow: 'hidden',
+    position: 'relative'
+};
+
+const messageListStyle = {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    background: 'linear-gradient(180deg, rgba(15,23,42,0.7), rgba(15,23,42,0.9))'
+};
+
+const bubbleStyle = (role) => ({
+    alignSelf: role === 'user' ? 'flex-end' : 'flex-start',
+    background: role === 'user' ? 'linear-gradient(135deg, #22d3ee, #1d4ed8)' : 'rgba(248,250,252,0.9)',
+    color: role === 'user' ? '#fff' : '#0f172a',
+    padding: '14px 18px',
+    borderRadius: role === 'user' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+    maxWidth: '80%',
+    boxShadow: '0 10px 25px rgba(15,23,42,0.18)',
+    position: 'relative',
+    whiteSpace: 'pre-wrap'
+});
+
+const pageWrapperStyle = {
+    minHeight: '100vh',
+    background: 'radial-gradient(circle at top, rgba(59,130,246,0.25), transparent 50%), linear-gradient(180deg, #020617 0%, #0b1221 45%, #020617 100%)',
+    padding: '40px 0'
+};
+
+const applyContainerStyle = {
+    width: 'min(1280px, 100%)',
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '32px',
+    padding: '0 20px 60px'
+};
+
+const heroHeaderStyle = {
+    padding: '40px',
+    borderRadius: '36px',
+    background: 'linear-gradient(145deg, rgba(59,130,246,0.18), rgba(2,6,23,0.95))',
+    border: '1px solid rgba(59,130,246,0.35)',
+    boxShadow: '0 45px 90px rgba(2,6,23,0.8)',
+    position: 'relative',
+    overflow: 'hidden'
+};
+
+const heroStatCardStyle = {
+    borderRadius: '24px',
+    background: 'rgba(2,6,23,0.8)',
+    border: '1px solid rgba(148,163,184,0.3)',
+    padding: '18px',
+    boxShadow: '0 25px 45px rgba(2,6,23,0.55)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+};
+
+const heroCTAStyle = {
+    padding: '14px 26px',
+    borderRadius: '999px',
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+};
+
+const heroSecondaryStyle = {
+    padding: '14px 26px',
+    borderRadius: '999px',
+    border: '1px solid rgba(148,163,184,0.4)',
+    background: 'rgba(15,23,42,0.5)',
+    color: '#d1d5db',
+    fontWeight: 600
+};
+
+const heroPillStyle = {
+    padding: '8px 16px',
+    borderRadius: '999px',
+    background: 'rgba(148,163,184,0.12)',
+    border: '1px solid rgba(148,163,184,0.3)',
+    fontSize: '11px',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: '#e2e8f0'
+};
+
+const progressTimelineStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '18px',
+    borderRadius: '28px',
+    background: 'rgba(15,23,42,0.55)',
+    border: '1px solid rgba(59,130,246,0.25)',
+    boxShadow: '0 25px 45px rgba(2,6,23,0.5)',
+    gap: '12px'
+};
+
+const progressDot = (active, completed) => ({
+    width: '42px',
+    height: '42px',
+    borderRadius: '50%',
+    background: completed ? 'var(--success)' : active ? 'var(--primary)' : 'rgba(148,163,184,0.25)',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 600,
+    boxShadow: active ? '0 12px 30px rgba(59,130,246,0.4)' : 'none'
+});
+
+const stepLabelStyle = (active) => ({
+    fontSize: '12px',
+    letterSpacing: '0.2em',
+    textTransform: 'uppercase',
+    color: active ? '#fff' : '#94a3b8'
+});
+
+const formGridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '18px',
+    marginBottom: '28px'
+};
+
+const documentGridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '20px',
+    marginBottom: '24px'
+};
+
+const documentCardStyle = {
+    position: 'relative',
+    borderRadius: '20px',
+    border: '1px dashed rgba(148,163,184,0.5)',
+    padding: '22px 16px',
+    textAlign: 'center',
+    background: 'rgba(15,23,42,0.4)',
+    minHeight: '150px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '8px',
+    transition: 'transform 0.3s ease, border-color 0.3s ease'
+};
+
+const documentIconStyle = {
+    fontSize: '34px'
+};
+
+const infoStripStyle = {
+    borderRadius: '16px',
+    padding: '14px 18px',
+    background: 'rgba(59,130,246,0.12)',
+    border: '1px solid rgba(59,130,246,0.3)',
+    marginBottom: '12px'
+};
+
+const sectionCardStyle = {
+    borderRadius: '32px',
+    background: 'linear-gradient(145deg, rgba(15,23,42,0.9), rgba(15,23,42,0.8))',
+    border: '1px solid rgba(59,130,246,0.3)',
+    boxShadow: '0 35px 70px rgba(2,6,23,0.7)',
+    padding: '32px'
+};
+
+const verificationDetailStyle = {
+    marginTop: '24px',
+    display: 'flex',
+    gap: '22px',
+    flexWrap: 'wrap'
+};
+
+const detailItemStyle = {
+    flex: '1 1 180px',
+    padding: '16px',
+    borderRadius: '18px',
+    background: 'rgba(15,23,42,0.6)',
+    border: '1px solid rgba(148,163,184,0.3)'
+};
+
+const chatInfoStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '16px',
+    margin: '0 28px 12px'
+};
+
+const chatStatStyle = {
+    padding: '12px 18px',
+    borderRadius: '14px',
+    background: 'rgba(59,130,246,0.15)',
+    border: '1px solid rgba(59,130,246,0.4)',
+    fontSize: '13px',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase'
+};
+
+const chatFooterStyle = {
+    padding: '20px',
+    borderTop: '1px solid rgba(148,163,184,0.3)',
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '12px',
+    background: 'rgba(15,23,42,0.85)'
+};
+
 export default function ApplyPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
@@ -56,14 +276,82 @@ export default function ApplyPage() {
     const [verification, setVerification] = useState(null);
     const [approvalScore, setApprovalScore] = useState(null);
 
+    const heroHighlights = [
+        'AI concierge guidance',
+        'Live document attestations',
+        'Rate-backed EMI clarity'
+    ];
+
+    const preApprovedLimit = approvalScore?.preApprovedLimit || { limit: 500000, interestRate: 12, maxEMI: 25000 };
+    const journeySteps = ['Document Upload', 'Verification', 'Loan Chat'];
+    const displayScore = approvalScore?.approvalScore?.score || 720;
+    const confidenceLabel = displayScore >= 700 ? 'High confidence' : 'Moderate confidence';
+    const scoreRange = `${Math.max(displayScore - 40, 300)} - 900`;
+
     // Chat state
     const [messages, setMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const [chatSessionId, setChatSessionId] = useState(null);
+    const [sessionRestored, setSessionRestored] = useState(false);
+    const [restoringSession, setRestoringSession] = useState(false);
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
+    // Restore chat session when entering step 3
+    useEffect(() => {
+        const restoreSession = async () => {
+            if (step === 3 && !sessionRestored && user) {
+                setRestoringSession(true);
+                try {
+                    // Generate a consistent session ID based on user
+                    const userSessionId = chatSessionId || `session_${user.phone}_${Date.now()}`;
+                    
+                    const res = await fetch(`${API_URL}/api/chat/restore`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sessionId: userSessionId,
+                            customerData: formData
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (data.ok) {
+                        setChatSessionId(data.sessionId);
+                        
+                        if (data.restored && data.messages && data.messages.length > 0) {
+                            // Restore previous messages
+                            setMessages(data.messages);
+                            console.log(`✅ Session restored: ${data.sessionId} (${data.messages.length} messages)`);
+                            
+                            // Show restoration message
+                            setTimeout(() => {
+                                setMessages(prev => [...prev, {
+                                    role: 'bot',
+                                    content: data.message || 'Welcome back! Continuing from where you left off...'
+                                }]);
+                            }, 500);
+                        } else {
+                            console.log(`✨ New session created: ${data.sessionId}`);
+                        }
+                        
+                        setSessionRestored(true);
+                    }
+                } catch (err) {
+                    console.error('Session restoration error:', err);
+                    // Continue with new session on error
+                    setChatSessionId(`session_${user.phone}_${Date.now()}`);
+                    setSessionRestored(true);
+                }
+                setRestoringSession(false);
+            }
+        };
+
+        restoreSession();
+    }, [step, sessionRestored, user]);
 
     const handleFileChange = (docType, e) => {
         const file = e.target.files[0];
@@ -162,35 +450,63 @@ export default function ApplyPage() {
     }
 
     return (
-        <>
-            <header className="header">
-                <nav className="nav container">
-                    <Link href="/dashboard" className="logo">🏦 BFSI Loan Platform</Link>
-                    <ul className="nav-links">
-                        <li><Link href="/dashboard">Dashboard</Link></li>
-                        <li><span className="badge badge-success">Apply</span></li>
-                    </ul>
-                </nav>
-            </header>
-
-            <div className="container" style={{ padding: '40px 20px' }}>
-                {/* Progress Steps */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginBottom: '40px' }}>
-                    {['Documents', 'Verification', 'Loan Chat'].map((label, i) => (
-                        <div key={i} style={{ textAlign: 'center' }}>
-                            <div style={{
-                                width: '40px', height: '40px', borderRadius: '50%',
-                                background: step > i ? 'var(--success)' : step === i + 1 ? 'var(--primary)' : 'var(--border)',
-                                color: step >= i + 1 ? '#fff' : 'var(--text-muted)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontWeight: 'bold'
-                            }}>
-                                {step > i + 1 ? '✓' : i + 1}
+        <div style={pageWrapperStyle}>
+            <div style={applyContainerStyle}>
+                <header style={heroHeaderStyle} className="glass-panel">
+                    <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <p style={{ margin: 0, fontSize: '11px', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#cbd5f5' }}>Precision Lending Studio</p>
+                            <h1 style={{ margin: 0, fontSize: '2.8rem', fontWeight: 600 }}>Concierge-grade loans for the modern borrower</h1>
+                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '15px', maxWidth: '480px' }}>Launch your loan path with a live AI concierge, instant document attestations, and EMI projections tuned to your needs.</p>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                <Link href="/dashboard" className="btn btn-primary" style={heroCTAStyle}>
+                                    View offer canvas
+                                </Link>
+                                <button type="button" className="btn" style={heroSecondaryStyle}>
+                                    Schedule a call
+                                </button>
                             </div>
-                            <span style={{ color: step >= i + 1 ? 'var(--primary)' : 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>
-                                {label}
-                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
+                                {heroHighlights.map((label) => (
+                                    <span key={label} style={heroPillStyle}>{label}</span>
+                                ))}
+                            </div>
                         </div>
-                    ))}
+                        <div style={{ flex: '0 1 320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={heroStatCardStyle}>
+                                <p style={{ margin: 0, fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#94a3b8' }}>Progress</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '40px', fontWeight: 700, color: '#fff' }}>{step}/3</span>
+                                    <span style={{ color: '#cbd5f5', fontSize: '13px' }}>Complete each stage to unlock instant disbursal</span>
+                                </div>
+                                <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(148,163,184,0.2)', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${(step / 3) * 100}%`, background: 'linear-gradient(90deg, var(--primary), #22d3ee)' }} />
+                                </div>
+                            </div>
+                            <div style={heroStatCardStyle}>
+                                <p style={{ margin: 0, fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#94a3b8' }}>Pre-approved ceiling</p>
+                                <strong style={{ fontSize: '30px', color: '#bae6fd' }}>₹{preApprovedLimit.limit.toLocaleString()}</strong>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#cbd5f5' }}>
+                                    <span>{preApprovedLimit.interestRate}% p.a.</span>
+                                    <span>EMI ₹{preApprovedLimit.maxEMI.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at top right, rgba(59,130,246,0.25), transparent 60%)' }} />
+                </header>
+
+                <div style={progressTimelineStyle}>
+                    {journeySteps.map((label, index) => {
+                        const completed = step > index + 1;
+                        const active = step === index + 1;
+                        return (
+                            <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <div style={progressDot(active, completed)}>{completed ? '✓' : index + 1}</div>
+                                <span style={stepLabelStyle(active)}>{label}</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {error && (
@@ -199,12 +515,13 @@ export default function ApplyPage() {
                     </div>
                 )}
 
-                {/* Step 1: Document Upload */}
                 {step === 1 && (
-                    <div className="card glass">
-                        <h2 className="mb-8 text-center">📄 Upload Your Documents</h2>
-
-                        <div className="grid-2 mb-8" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="card glass" style={sectionCardStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                            <h2 className="mb-8 text-center" style={{ margin: 0 }}>📄 Upload Your Documents</h2>
+                            <span style={chatStatStyle}>256-bit encrypted</span>
+                        </div>
+                        <div style={formGridStyle}>
                             <div className="input-group">
                                 <label>Full Name</label>
                                 <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} disabled />
@@ -230,32 +547,36 @@ export default function ApplyPage() {
                                 <input className="form-input" name="city" value={formData.city} onChange={handleInputChange} placeholder="Mumbai" />
                             </div>
                         </div>
-
-                        <h3 className="mb-4">Upload Documents</h3>
-                        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div style={documentGridStyle}>
                             {[
                                 { key: 'aadhaar', label: 'Aadhaar Card', icon: '🪪' },
                                 { key: 'pan', label: 'PAN Card', icon: '💳' },
                                 { key: 'bankStatement', label: 'Bank Statement', icon: '🏦' },
                                 { key: 'salarySlip', label: 'Salary Slip', icon: '💰' }
                             ].map(doc => (
-                                <div key={doc.key} className="card" style={{ position: 'relative', textAlign: 'center', cursor: 'pointer', border: '2px dashed var(--border)' }}>
+                                <label key={doc.key} className="document-card" style={documentCardStyle}>
                                     <input
                                         type="file"
                                         accept="image/*,.pdf"
                                         onChange={(e) => handleFileChange(doc.key, e)}
                                         style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
                                     />
-                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>{doc.icon}</div>
-                                    <p style={{ fontWeight: '500' }}>{documents[doc.key]?.name || `Upload ${doc.label}`}</p>
-                                    {documents[doc.key] && <span className="badge badge-success" style={{ display: 'inline-block', marginTop: '8px', padding: '4px 8px', borderRadius: '4px', background: 'var(--success)', color: '#fff', fontSize: '12px' }}>✓ Uploaded</span>}
-                                </div>
+                                    <span style={documentIconStyle}>{doc.icon}</span>
+                                    <p style={{ fontWeight: 500 }}>{documents[doc.key]?.name || `Upload ${doc.label}`}</p>
+                                    {documents[doc.key] && (
+                                        <span className="badge badge-success" style={{ display: 'inline-block', marginTop: '8px', padding: '4px 8px', borderRadius: '4px', background: 'var(--success)', color: '#fff', fontSize: '12px' }}>
+                                            ✓ Uploaded
+                                        </span>
+                                    )}
+                                </label>
                             ))}
                         </div>
-
+                        <div style={infoStripStyle}>
+                            <strong>Instant verification</strong> • identity and income files are matched against secure data sources in under 2 minutes.
+                        </div>
                         <button
                             className="btn btn-primary"
-                            style={{ width: '100%', marginTop: '32px', padding: '16px' }}
+                            style={{ width: '100%', marginTop: '12px', padding: '16px' }}
                             onClick={verifyDocuments}
                             disabled={loading}
                         >
@@ -264,17 +585,17 @@ export default function ApplyPage() {
                     </div>
                 )}
 
-                {/* Step 2: Verification Results */}
                 {step === 2 && (
-                    <div className="card glass">
-                        <h2 className="mb-8 text-center">✅ Verification Complete</h2>
-
-                        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                            {/* Approval Score */}
-                            <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+                    <div className="card glass" style={sectionCardStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                            <h2 className="mb-8 text-center" style={{ margin: 0 }}>✅ Verification Complete</h2>
+                            <span style={chatStatStyle}>Score auto-refreshed</span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                            <div className="card" style={{ flex: '1 1 280px', textAlign: 'center', padding: '28px', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
                                 <h3 className="mb-4">Your Approval Score</h3>
                                 {(() => {
-                                    const score = approvalScore?.approvalScore?.score || 720;
+                                    const score = displayScore;
                                     const minScore = 300;
                                     const maxScore = 900;
                                     const percentage = ((score - minScore) / (maxScore - minScore)) * 100;
@@ -304,85 +625,148 @@ export default function ApplyPage() {
                                         </div>
                                     );
                                 })()}
-                                <div style={{ marginTop: '16px', fontWeight: 'bold', color: approvalScore?.approvalScore?.score >= 700 ? 'var(--success)' : 'var(--warning)' }}>
+                                <div style={{ marginTop: '16px', fontWeight: 'bold', color: displayScore >= 700 ? 'var(--success)' : 'var(--warning)' }}>
                                     Grade: {approvalScore?.approvalScore?.grade || 'B'}
                                 </div>
                             </div>
-
-                            {/* Pre-Approved Limit */}
-                            <div className="card" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #1e293b 100%)', color: '#fff' }}>
+                            <div className="card" style={{ flex: '1 1 280px', background: 'linear-gradient(135deg, var(--primary) 0%, #1e293b 100%)', color: '#fff', padding: '28px' }}>
                                 <h3 className="mb-4" style={{ color: 'var(--accent)' }}>Pre-Approved Offer</h3>
                                 <div className="mb-4">
                                     <p style={{ fontSize: '14px', opacity: 0.8 }}>Maximum Loan Amount</p>
                                     <p style={{ fontSize: '32px', fontWeight: '700', color: 'var(--accent)' }}>
-                                        ₹{(approvalScore?.preApprovedLimit?.limit || 500000).toLocaleString()}
+                                        ₹{preApprovedLimit.limit.toLocaleString()}
                                     </p>
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px' }}>
                                     <div>
                                         <p style={{ fontSize: '14px', opacity: 0.8 }}>Interest Rate</p>
                                         <p style={{ fontSize: '20px', fontWeight: '600' }}>
-                                            {approvalScore?.preApprovedLimit?.interestRate || 12}%
+                                            {preApprovedLimit.interestRate}%
                                         </p>
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '14px', opacity: 0.8 }}>Max EMI</p>
                                         <p style={{ fontSize: '20px', fontWeight: '600' }}>
-                                            ₹{(approvalScore?.preApprovedLimit?.maxEMI || 25000).toLocaleString()}
+                                            ₹{preApprovedLimit.maxEMI.toLocaleString()}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
+                        <div style={verificationDetailStyle}>
+                            {[
+                                { label: 'Grade', value: approvalScore?.approvalScore?.grade || 'B' },
+                                { label: 'Score Range', value: scoreRange },
+                                { label: 'Confidence', value: confidenceLabel }
+                            ].map((item) => (
+                                <div key={item.label} style={detailItemStyle}>
+                                    <p style={{ fontSize: '12px', letterSpacing: '0.2em', color: '#cbd5f5', margin: 0 }}>{item.label}</p>
+                                    <p style={{ fontSize: '20px', margin: '8px 0 0', fontWeight: 600 }}>{item.value}</p>
+                                </div>
+                            ))}
+                        </div>
                         <button className="btn btn-primary" style={{ width: '100%', marginTop: '32px' }} onClick={() => setStep(3)}>
                             Proceed to Loan Chat →
                         </button>
                     </div>
                 )}
 
-                {/* Step 3: Loan Chat */}
                 {step === 3 && (
-                    <div className="card glass" style={{ height: '600px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
-                            <h2>💬 Loan Assistant</h2>
-                            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>AI Agent is online</p>
+                    <div style={chatCardStyle}>
+                        <div style={{ padding: '28px 28px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <p style={{ fontSize: '14px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#bae6fd', marginBottom: '4px' }}>personal concierge</p>
+                                <h2 style={{ margin: 0, color: '#fff', fontSize: '2rem' }}>💬 Loan Assistant</h2>
+                                <p style={{ color: '#93c5fd', marginTop: '4px' }}>
+                                    {restoringSession ? 'Restoring your session...' : 'AI advisor live • powered by Ollama'}
+                                </p>
+                            </div>
+                            <span className="pulse-badge"><span>{restoringSession ? 'loading' : 'online'}</span></span>
                         </div>
-
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {messages.length === 0 && (
-                                <div style={{ alignSelf: 'flex-start', background: '#f1f5f9', padding: '12px 16px', borderRadius: '12px 12px 12px 0', maxWidth: '80%' }}>
-                                    Hello {user.name.split(' ')[0]}! 👋 I've analyzed your profile. Say "I need a loan" to confirm your offer!
+                        <div style={chatInfoStyle}>
+                            <span style={chatStatStyle}>Avg answer 2s</span>
+                            <span style={chatStatStyle}>Limit ₹{preApprovedLimit.limit.toLocaleString()}</span>
+                            <span style={chatStatStyle}>Interest {preApprovedLimit.interestRate}%</span>
+                        </div>
+                        <div style={messageListStyle}>
+                            {messages.length === 0 && !restoringSession && (
+                                <div style={{ alignSelf: 'flex-start', background: 'rgba(248,250,252,0.6)', padding: '16px', borderRadius: '16px 16px 16px 0', maxWidth: '80%', boxShadow: '0 12px 30px rgba(15,23,42,0.15)' }}>
+                                    Hello {user.name.split(' ')[0]}! 👋 I've analyzed your documents and tailored a pre-approval for you. Say "I need a loan" to activate your offer!
+                                </div>
+                            )}
+                            {restoringSession && (
+                                <div style={{ alignSelf: 'center', padding: '16px', color: '#93c5fd', textAlign: 'center' }}>
+                                    <span>🔄 Loading your previous conversation...</span>
                                 </div>
                             )}
                             {messages.map((msg, i) => (
-                                <div key={i} style={{
-                                    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                    background: msg.role === 'user' ? 'var(--primary)' : '#f1f5f9',
-                                    color: msg.role === 'user' ? '#fff' : '#000', // Force black text for bot on light bg
-                                    padding: '12px 16px',
-                                    borderRadius: msg.role === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0',
-                                    maxWidth: '80%',
-                                    whiteSpace: 'pre-wrap'
-                                }}>
+                                <div key={i} style={bubbleStyle(msg.role)}>
                                     {msg.content}
                                 </div>
                             ))}
                         </div>
-
-                        <div style={{ padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', gap: '12px' }}>
-                            <input
-                                className="form-input"
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                                placeholder="Type your message..."
-                            />
-                            <button className="btn btn-primary" onClick={sendChatMessage}>Send</button>
+                        <div style={chatFooterStyle}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <span style={{ fontSize: '12px', color: '#cbd5f5' }}>Live guidance</span>
+                                <span style={{ fontSize: '14px', color: '#e0f2fe', fontWeight: '600' }}>Response within seconds</span>
+                            </div>
+                            <div style={{ flex: 1, minWidth: '260px', display: 'flex', gap: '10px' }}>
+                                <input
+                                    className="form-input"
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                                    placeholder="Type your message..."
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.08)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}
+                                />
+                                <button className="btn btn-primary" onClick={sendChatMessage} style={{ padding: '12px 24px', fontWeight: '600' }}>Send ➜</button>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-        </>
+            <style jsx>{`
+                .pulse-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.2em;
+                    padding: 6px 14px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(129,140,248,0.6);
+                    color: #bae6fd;
+                    position: relative;
+                    overflow: hidden;
+                    background: rgba(129,140,248,0.1);
+                }
+
+                .pulse-badge::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: radial-gradient(circle, rgba(59,130,246,0.4), transparent 60%);
+                    animation: pulse 2.4s infinite;
+                    opacity: 0.7;
+                }
+
+                .pulse-badge span {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .document-card:hover {
+                    transform: translateY(-6px);
+                    border-color: rgba(59,130,246,0.7);
+                }
+
+                @keyframes pulse {
+                    0% { transform: scale(0.6); opacity: 0.8; }
+                    50% { transform: scale(1); opacity: 0.2; }
+                    100% { transform: scale(1.4); opacity: 0; }
+                }
+            `}</style>
+        </div>
     );
 }

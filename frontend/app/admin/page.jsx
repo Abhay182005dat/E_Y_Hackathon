@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,7 @@ export default function AdminPage() {
     const [selectedApp, setSelectedApp] = useState(null);
     const [filter, setFilter] = useState('all');
     const [loading, setLoading] = useState(true);
+    const [expandedPhone, setExpandedPhone] = useState(null); // Track expanded phone numbers
 
     // Protect Route
     useEffect(() => {
@@ -62,6 +63,56 @@ export default function AdminPage() {
     };
 
     const filteredApps = filter === 'all' ? applications : applications.filter(a => a.status === filter);
+
+    // Group applications by phone number
+    const groupedByPhone = filteredApps.reduce((acc, app) => {
+        const phone = app.phone || 'Unknown';
+        if (!acc[phone]) {
+            acc[phone] = [];
+        }
+        acc[phone].push(app);
+        return acc;
+    }, {});
+
+    // Convert to array and sort by most recent application
+    const phoneGroups = Object.entries(groupedByPhone).map(([phone, apps]) => {
+        const sorted = [...apps].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+        return {
+            phone,
+            applications: sorted,
+            latestApp: sorted[0],
+            totalAmount: apps.reduce((sum, app) => sum + app.amount, 0),
+            count: apps.length
+        };
+    }).sort((a, b) => new Date(b.latestApp.submittedAt) - new Date(a.latestApp.submittedAt));
+
+    const toggleExpand = (phone) => {
+        setExpandedPhone(expandedPhone === phone ? null : phone);
+    };
+
+    const tableCardStyle = {
+        overflowX: 'auto',
+        borderRadius: '28px',
+        padding: '20px 24px',
+        background: 'linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,64,175,0.8))',
+        boxShadow: '0 20px 60px rgba(15,23,42,0.35)',
+        backdropFilter: 'blur(24px)',
+        border: '1px solid rgba(255,255,255,0.08)'
+    };
+
+    const groupRowStyle = (phone) => ({
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        cursor: 'pointer',
+        background: expandedPhone === phone ? 'rgba(255,255,255,0.05)' : 'transparent',
+        transition: 'background 0.35s ease, transform 0.35s ease',
+        transform: expandedPhone === phone ? 'scale(1.01)' : 'scale(1)'
+    });
+
+    const expandedRowStyle = {
+        background: 'rgba(234,244,255,0.9)',
+        borderLeft: '4px solid rgba(59,130,246,0.9)',
+        transition: 'background 0.3s ease'
+    };
 
     const handleApprove = async (id) => {
         try {
@@ -181,49 +232,104 @@ export default function AdminPage() {
                 </div>
 
                 {/* Table */}
-                <div className="card" style={{ overflowX: 'auto' }}>
+                <div style={tableCardStyle}>
                     {applications.length === 0 ? (
-                        <div className="text-center p-8 text-muted">No applications found.</div>
+                        <div className="text-center p-8 text-muted" style={{ color: '#cbd5f5' }}>No applications found.</div>
                     ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#fff' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                                    <th style={{ padding: '16px' }}>Application ID</th>
-                                    <th style={{ padding: '16px' }}>Customer</th>
-                                    <th style={{ padding: '16px' }}>Amount</th>
-                                    <th style={{ padding: '16px' }}>Approval %</th>
-                                    <th style={{ padding: '16px' }}>Status</th>
-                                    <th style={{ padding: '16px' }}>Action</th>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Customer</th>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Phone Number</th>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Total Apps</th>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Latest Amount</th>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Latest Status</th>
+                                    <th style={{ padding: '16px', fontSize: '14px', letterSpacing: '0.08em', color: '#cbd5f5' }}>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredApps.map(app => (
-                                    <tr key={app.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '16px', fontFamily: 'monospace' }}>{app.id}</td>
-                                        <td style={{ padding: '16px' }}>
-                                            <strong>{app.customerName}</strong>
-                                            <div className="text-muted" style={{ fontSize: '12px' }}>{app.phone}</div>
-                                        </td>
-                                        <td style={{ padding: '16px' }}>₹{formatAmount(app.amount)}</td>
-                                        <td style={{ padding: '16px' }}>
-                                            <span style={{ fontWeight: 'bold', color: app.approvalScore >= 700 ? 'var(--success)' : 'var(--warning)' }}>
-                                                {app.approvalScore}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '16px' }}>
-                                            <span style={{
-                                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
-                                                ...getStatusStyle(app.status)
-                                            }}>
-                                                {app.status.toUpperCase()}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '16px' }}>
-                                            <button className="btn btn-secondary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => setSelectedApp(app)}>
-                                                View
-                                            </button>
-                                        </td>
-                                    </tr>
+                                {phoneGroups.map(group => (
+                                    <Fragment key={group.phone}>
+                                        <tr 
+                                            style={groupRowStyle(group.phone)}
+                                            onClick={() => toggleExpand(group.phone)}
+                                        >
+                                            <td style={{ padding: '16px' }}>
+                                                <strong>{group.latestApp.customerName}</strong>
+                                                <div className="text-muted" style={{ fontSize: '12px', color: '#94a3b8' }}>Acc: {group.latestApp.accountNumber}</div>
+                                            </td>
+                                            <td style={{ padding: '16px', fontWeight: 'bold' }}>
+                                                📱 {group.phone}
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                <span style={{ 
+                                                    padding: '6px 14px',
+                                                    borderRadius: '999px',
+                                                    background: expandedPhone === group.phone ? 'rgba(16,185,129,0.25)' : 'rgba(59,130,246,0.25)',
+                                                    color: '#fff',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    {group.count}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '16px' }}>₹{formatAmount(group.latestApp.amount)}</td>
+                                            <td style={{ padding: '16px' }}>
+                                                <span style={{
+                                                    padding: '6px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 'bold',
+                                                    ...getStatusStyle(group.latestApp.status),
+                                                    color: '#fff'
+                                                }}>
+                                                    {group.latestApp.status.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '16px', textAlign: 'center' }}>
+                                                <span style={{ fontSize: '18px', color: '#94a3b8', transition: 'transform 0.3s ease' }}>
+                                                    {expandedPhone === group.phone ? '▼' : '▶'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {expandedPhone === group.phone && group.applications.map((app) => (
+                                            <tr 
+                                                key={app.id} 
+                                                style={expandedRowStyle}
+                                            >
+                                                <td style={{ padding: '16px', fontSize: '12px', fontFamily: 'monospace', color: '#0f172a' }}>
+                                                    <div>{app.id}</div>
+                                                    <div style={{ fontSize: '11px', color: '#475569' }}>{app.customerName}</div>
+                                                </td>
+                                                <td style={{ padding: '16px', color: '#0f172a' }}>
+                                                    {new Date(app.submittedAt).toLocaleString()}
+                                                </td>
+                                                <td style={{ padding: '16px', fontWeight: 'bold', color: app.approvalScore >= 700 ? 'var(--success)' : 'var(--warning)' }}>
+                                                    Score: {app.approvalScore}%
+                                                </td>
+                                                <td style={{ padding: '16px', fontWeight: 'bold', color: '#0f172a' }}>
+                                                    ₹{formatAmount(app.amount)}
+                                                </td>
+                                                <td style={{ padding: '16px' }}>
+                                                    <span style={{
+                                                        padding: '4px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 'bold',
+                                                        ...getStatusStyle(app.status)
+                                                    }}>
+                                                        {app.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '16px' }}>
+                                                    <button 
+                                                        className="btn btn-secondary" 
+                                                        style={{ fontSize: '12px', padding: '6px 12px' }} 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedApp(app);
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </Fragment>
                                 ))}
                             </tbody>
                         </table>
