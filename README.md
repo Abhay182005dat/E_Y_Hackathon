@@ -42,25 +42,25 @@ This is a **smart loan application system** for banks and financial institutions
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 1: Customer Login                                      │
+│  STEP 1: Customer Login                                     │
 │  Customer enters phone number → Gets OTP → Logs in          │
 │  File: utils/auth.js                                        │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 2: Fill Application Form                               │
+│  STEP 2: Fill Application Form                              │
 │  Customer provides: Name, Salary, Loan Amount, Documents    │
 │  File: frontend/app/apply/page.jsx                          │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 3: Document Verification (OCR)                         │
+│  STEP 3: Document Verification (OCR)                        │
 │  System scans: Aadhaar, PAN, Bank Statement, Salary Slip    │
 │  File: utils/ocr.js                                         │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 4: Credit Score Calculation                            │
+│  STEP 4: Credit Score Calculation                           │
 │  System calculates approval score (300-900) based on:       │
 │  - Income Stability, Debt-to-Income, Banking Behavior       │
 │  File: utils/creditScore.js                                 │
@@ -68,20 +68,20 @@ This is a **smart loan application system** for banks and financial institutions
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  STEP 5: Chat with AI for Loan Negotiation                  │
-│  Customer negotiates interest rate with chatbot              │
+│  Customer negotiates interest rate with chatbot             │
 │  File: server.js (Chat endpoint)                            │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 6: Admin Reviews Application                           │
-│  Bank admin approves/rejects from dashboard                  │
+│  STEP 6: Admin Reviews Application                          │
+│  Bank admin approves/rejects from dashboard                 │
 │  File: frontend/app/admin/page.jsx                          │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 7: Loan Disbursement                                   │
-│  Money transferred to customer's account                     │
-│  All records saved on blockchain ledger                      │
+│  STEP 7: Loan Disbursement                                  │
+│  Money transferred to customer's account                    │
+│  All records saved on blockchain ledger                     │
 │  File: agents/disbursementAgent.js, blockchain/ledger.js    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -95,50 +95,50 @@ This is a **smart loan application system** for banks and financial institutions
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                         FRONTEND LAYER                           │
-│  (What users see in their browser)                              │
+│  (What users see in their browser)                               │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │ Login Page   │  │ Apply Page   │  │ Dashboard    │         │
-│  │ (OTP Auth)   │  │ (Form + Docs)│  │ (Loan Status)│         │
-│  └──────────────┘  └──────────────┘  └──────────────┘         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
+│  │ Login Page   │  │ Apply Page   │  │ Dashboard    │            │
+│  │ (OTP Auth)   │  │ (Form + Docs)│  │ (Loan Status)│            │
+│  └──────────────┘  └──────────────┘  └──────────────┘            │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐                            │
-│  │ Admin Portal │  │ Chat Widget  │                            │
-│  │ (Approvals)  │  │ (Negotiation)│                            │
-│  └──────────────┘  └──────────────┘                            │
+│  ┌──────────────┐  ┌──────────────┐                              │
+│  │ Admin Portal │  │ Chat Widget  │                              │
+│  │ (Approvals)  │  │ (Negotiation)│                              │
+│  └──────────────┘  └──────────────┘                              │
 └──────────────────────────────────────────────────────────────────┘
                            ↕ HTTP API Calls
 ┌──────────────────────────────────────────────────────────────────┐
 │                         BACKEND LAYER                            │
-│  (Server that processes everything)                             │
+│  (Server that processes everything)                              │
 │                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │                    server.js (Main API)                   │  │
-│  │  - Authentication endpoints                               │  │
-│  │  - Document verification endpoints                        │  │
-│  │  - Chat endpoints                                         │  │
-│  │  - Application management                                 │  │
-│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │                    server.js (Main API)                   │   │
+│  │  - Authentication endpoints                               │   │
+│  │  - Document verification endpoints                        │   │
+│  │  - Chat endpoints                                         │   │
+│  │  - Application management                                 │   │
+│  └──────────────────────────────────────────────────────────┘    │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │ AI Agents    │  │ Utils        │  │ Middleware   │         │
-│  │ (Workflow)   │  │ (Helpers)    │  │ (Security)   │         │
-│  └──────────────┘  └──────────────┘  └──────────────┘         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
+│  │ AI Agents    │  │ Utils        │  │ Middleware   │            │
+│  │ (Workflow)   │  │ (Helpers)    │  │ (Security)   │            │
+│  └──────────────┘  └──────────────┘  └──────────────┘            │
 └──────────────────────────────────────────────────────────────────┘
                            ↕ Read/Write Data
 ┌──────────────────────────────────────────────────────────────────┐
 │                         DATA LAYER                               │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │ MongoDB      │  │ Redis        │  │ Ethereum     │         │
-│  │ (Database)   │  │ (Chat Cache) │  │ (Blockchain) │         │
-│  │ - Users      │  │ - Sessions   │  │ - Smart      │         │
-│  │ - Apps       │  │ - Messages   │  │   Contract   │         │
-│  │              │  │              │  │ - Immutable  │         │
-│  │              │  │              │  │   Ledger     │         │
-│  └──────────────┘  └──────────────┘  └──────────────┘         │
-│                                       ↕ MetaMask                │
-│                                       ↕ Web3.js                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
+│  │ MongoDB      │  │ Redis        │  │ Ethereum     │            │
+│  │ (Database)   │  │ (Chat Cache) │  │ (Blockchain) │            │
+│  │ - Users      │  │ - Sessions   │  │ - Smart      │            │
+│  │ - Apps       │  │ - Messages   │  │   Contract   │            │
+│  │              │  │              │  │ - Immutable  │            │
+│  │              │  │              │  │   Ledger     │            │
+│  └──────────────┘  └──────────────┘  └──────────────┘            │
+│                                       ↕ MetaMask                 │
+│                                       ↕ Web3.js                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -297,7 +297,7 @@ ey-techathon/
 │  Your Loan Applications                │
 ├────────────────────────────────────────┤
 │  LOAN-001  ₹5,00,000  Approved  ✅     │
-│  Next EMI: ₹16,622 on Mar 4, 2026     │
+│  Next EMI: ₹16,622 on Mar 4, 2026      │
 ├────────────────────────────────────────┤
 │  LOAN-002  ₹2,00,000  Pending   ⏳     │
 └────────────────────────────────────────┘
