@@ -44,8 +44,20 @@ export function AuthProvider({ children }) {
     };
 
     const login = (userData, token) => {
+        console.log('🔐 [AuthContext] LOGIN called');
+        console.log('   User:', userData);
+        console.log('   Phone:', userData.phone);
+        console.log('   Account:', userData.accountNumber);
+        console.log('   Role:', userData.role);
+        
+        // Clear old token first
+        localStorage.removeItem('token');
+        
+        // Set new token
         localStorage.setItem('token', token);
         setUser(userData);
+
+        console.log('✅ [AuthContext] Token stored, user state updated');
 
         // Redirect based on role
         if (userData.role === 'admin') {

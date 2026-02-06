@@ -2,6 +2,7 @@
 const { appendToLedger } = require('../blockchain/ledger');
 const { sha256 } = require('../utils/hash');
 const { uploadJsonToPinata } = require('../utils/pinataClient');
+const { logDisbursementToBlockchain } = require('../blockchain/web3Client');
 
 function generateEmiSchedule(loanAmount, interestRate, term) {
     const monthlyRate = interestRate / 12 / 100;
@@ -23,8 +24,13 @@ function generateEmiSchedule(loanAmount, interestRate, term) {
     return { schedule, monthlyEmi: emi.toFixed(2) };
 }
 
-async function disburseFunds(sessionId, loanId, sanctionLetter) {
+async function disburseFunds(sessionId, loanId, sanctionLetter, userId = null) {
     const { loanAmount, interestRate, term } = sanctionLetter;
+    
+    // Extract userId if not provided
+    if (!userId) {
+        userId = sanctionLetter.phone || sanctionLetter.accountNumber || sanctionLetter.userId || sanctionLetter.borrowerId || 'unknown';
+    }
     
     const transactionId = sha256(`disburse-${loanId}-${Date.now()}`);
     const { schedule, monthlyEmi } = generateEmiSchedule(loanAmount, interestRate, term);
@@ -51,6 +57,20 @@ async function disburseFunds(sessionId, loanId, sanctionLetter) {
         cid,
         timestamp: new Date().toISOString()
     });
+    
+    // Log to blockchain
+    try {
+        await logDisbursementToBlockchain({
+            loanId,
+            userId,
+            amount: loanAmount,
+            recipientAccount: userId, // Using userId as account for now
+            transactionId
+        });
+    } catch (error) {
+        console.error('Failed to log disbursement to blockchain:', error.message);
+        // Continue even if blockchain logging fails
+    }
 
     return { 
         disbursementStatus: 'completed', 

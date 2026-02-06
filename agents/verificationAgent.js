@@ -3,6 +3,7 @@ const { appendToLedger } = require('../blockchain/ledger');
 const { sha256 } = require('../utils/hash');
 const { callGemini } = require('../utils/geminiClient');
 const { uploadJsonToPinata } = require('../utils/pinataClient');
+const { logDocumentToBlockchain } = require('../blockchain/web3Client');
 
 function parseKycResponse(rawResponse) {
     if (typeof rawResponse !== 'string') {
@@ -21,8 +22,13 @@ function parseKycResponse(rawResponse) {
     }
 }
 
-async function verifyKYC(sessionId, kycDocuments) {
+async function verifyKYC(sessionId, kycDocuments, userId = null) {
     const { pan, aadhaar } = kycDocuments;
+    
+    // Extract userId if not provided
+    if (!userId) {
+        userId = kycDocuments.phone || kycDocuments.accountNumber || kycDocuments.userId || 'unknown';
+    }
 
     if (!pan || !aadhaar) {
         throw new Error("PAN and Aadhaar documents are required for KYC.");
@@ -53,6 +59,32 @@ async function verifyKYC(sessionId, kycDocuments) {
     const cid = await uploadJsonToPinata(verificationRecord);
 
     appendToLedger('identity_ledger', { ...verificationRecord, cid });
+    
+    // Log documents to blockchain
+    try {
+        // Log PAN document
+        await logDocumentToBlockchain({
+            documentId: `PAN_${sessionId}_${Date.now()}`,
+            userId,
+            documentType: 'pan',
+            verified: kycStatus === 'verified',
+            extractedData: { pan },
+            ipfsHash: cid
+        });
+        
+        // Log Aadhaar document
+        await logDocumentToBlockchain({
+            documentId: `AADHAAR_${sessionId}_${Date.now()}`,
+            userId,
+            documentType: 'aadhaar',
+            verified: kycStatus === 'verified',
+            extractedData: { aadhaar },
+            ipfsHash: cid
+        });
+    } catch (error) {
+        console.error('Failed to log KYC documents to blockchain:', error.message);
+        // Continue even if blockchain logging fails
+    }
 
     return { kycStatus, reason: reason || 'KYC rejected without a detailed reason' };
 }

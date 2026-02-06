@@ -61,9 +61,11 @@ function generateOTPHash(otp) {
 }
 
 async function sendOTP({ name, accountNumber, phone }) {
+    console.log('🔥🔥🔥 [Auth] sendOTP FUNCTION CALLED 🔥🔥🔥');
     if (!name || !accountNumber || !phone) {
         throw new Error('Name, Account Number, and Phone are required');
     }
+    console.log(`ℹ️  [Auth] sendOTP called for phone=${phone} account=${accountNumber} name=${name}`);
     
     // Generate OTP
     const otp = generateOTP();
@@ -105,6 +107,7 @@ async function sendOTP({ name, accountNumber, phone }) {
     console.log('='.repeat(60) + '\n');
 
     // Return hash instead of OTP
+    console.log(`ℹ️  [Auth] sendOTP completed (otpHash=${otpHash}) for phone=${phone}`);
     return { message: 'OTP generated (paste hash at /otp-page.html)', otpHash };
 }
 
@@ -112,22 +115,27 @@ async function verifyLoginOTP({ phone, otp, accountNumber }) {
     const stored = otpStore.get(phone);
 
     if (!stored) {
+        console.warn(`⚠️  [Auth] verifyLoginOTP: no OTP found for phone=${phone}`);
         throw new Error('OTP expired or not requested');
     }
 
     if (Date.now() > stored.expires) {
         otpStore.delete(phone);
+        console.warn(`⚠️  [Auth] verifyLoginOTP: OTP expired for phone=${phone}`);
         throw new Error('OTP expired');
     }
 
     if (stored.otp !== otp) {
+        console.warn(`⚠️  [Auth] verifyLoginOTP: invalid OTP attempt for phone=${phone}`);
         throw new Error('Invalid OTP');
     }
 
     if (stored.userData.accountNumber !== accountNumber) {
+        console.warn(`⚠️  [Auth] verifyLoginOTP: account number mismatch for phone=${phone} expected=${stored.userData.accountNumber} got=${accountNumber}`);
         throw new Error('Account number mismatch');
     }
 
+    console.log(`ℹ️  [Auth] verifyLoginOTP: OTP verified for phone=${phone} account=${accountNumber}`);
     // OTP Verified - Create or Get User
     const existingUser = getUserByAccountNumber(accountNumber);
     let user;

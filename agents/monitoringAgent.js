@@ -3,6 +3,7 @@ const { appendToLedger, getLedger } = require('../blockchain/ledger');
 const { sha256 } = require('../utils/hash');
 const { uploadJsonToPinata } = require('../utils/pinataClient');
 const { callGemini } = require('../utils/geminiClient');
+const { logPaymentToBlockchain } = require('../blockchain/web3Client');
 
 function parsePredictionResponse(rawResponse) {
     if (typeof rawResponse !== 'string') {
@@ -21,9 +22,14 @@ function parsePredictionResponse(rawResponse) {
     }
 }
 
-async function logEmiPayment(loanId, paymentData) {
-    const { amount, paymentDate } = paymentData;
+async function logEmiPayment(loanId, paymentData, userId = null) {
+    const { amount, paymentDate, emiNumber = 1 } = paymentData;
     const paymentId = sha256(`${loanId}-${amount}-${paymentDate}`);
+    
+    // Extract userId if not provided
+    if (!userId) {
+        userId = paymentData.phone || paymentData.accountNumber || paymentData.userId || 'unknown';
+    }
 
     const prediction = await predictDefaultRisk(loanId);
 
@@ -41,6 +47,25 @@ async function logEmiPayment(loanId, paymentData) {
     const cid = await uploadJsonToPinata(paymentRecord);
 
     appendToLedger('payment_ledger', { ...paymentRecord, cid });
+    
+    // Log to blockchain
+    if (amount > 0) { // Only log real payments (not mock payments)
+        try {
+            await logPaymentToBlockchain({
+                loanId,
+                userId,
+                emiNumber,
+                amount,
+                principalPaid: amount * 0.7, // Approximate breakdown
+                interestPaid: amount * 0.3,
+                status: 'paid',
+                receiptHash: cid
+            });
+        } catch (error) {
+            console.error('Failed to log EMI payment to blockchain:', error.message);
+            // Continue even if blockchain logging fails
+        }
+    }
 
     return { 
         paymentStatus: 'logged', 
@@ -56,8 +81,13 @@ async function predictDefaultRisk(loanId) {
 
     const prompt = `Given the following payment history for a loan, predict the default risk ('low', 'medium', 'high'). History: ${JSON.stringify(paymentsForLoan)}. If there are fewer than 3 payments, risk is 'low' and message is 'Monitoring started.'. If payments are consistent, risk is 'low' and message is 'Payments are consistent.'. Respond with a JSON object containing "risk" and "message" keys.`;
 
-    const predictionString = await callGemini(prompt);
-    return parsePredictionResponse(predictionString);
+    try {
+        const predictionString = await callGemini(prompt);
+        return parsePredictionResponse(predictionString);
+    } catch (err) {
+        console.warn('Prediction parsing failed, defaulting to low risk:', err.message);
+        return { risk: 'low', message: 'Monitoring started.' };
+    }
 }
 
 

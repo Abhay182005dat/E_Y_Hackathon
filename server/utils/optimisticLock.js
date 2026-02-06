@@ -70,7 +70,8 @@ async function updateWithVersion(db, collectionName, docId, expectedVersion, upd
     { returnDocument: 'after' }
   );
 
-  if (!result.value) {
+  // Handle both null result and null result.value
+  if (!result || !result.value) {
     // Check if document exists but version mismatch
     const existing = await col.findOne({ _id: filter._id });
     
@@ -158,7 +159,15 @@ async function updateWithRetry(db, collectionName, docId, updateFn, maxRetries =
     });
 
     if (!current) {
-      throw new Error('Document not found');
+      // Document not found - may have been deleted during retry
+      console.error(`⚠️  Document ${docId} not found during optimistic lock retry ${attempt + 1}`);
+      throw new Error(`Document not found: ${docId}`);
+    }
+
+    // Verify document has version field
+    if (typeof current.version !== 'number') {
+      console.error(`⚠️  Document ${docId} missing version field`);
+      throw new Error(`Document ${docId} is not versionable (missing version field)`);
     }
 
     // Generate update data based on current state
@@ -186,8 +195,12 @@ async function updateWithRetry(db, collectionName, docId, updateFn, maxRetries =
       throw new Error(`Update failed after ${maxRetries} retries due to version conflicts`);
     }
 
-    // Exponential backoff
-    await new Promise(resolve => setTimeout(resolve, Math.min(1000, 100 * Math.pow(2, attempt))));
+    // Exponential backoff with random jitter: 200ms, 400ms, 800ms, 1600ms, 3200ms (capped at 3s)
+    const baseBackoff = Math.min(3000, 200 * Math.pow(2, attempt));
+    const jitter = Math.random() * 200; // Add 0-200ms random jitter
+    const backoffMs = Math.floor(baseBackoff + jitter);
+    console.log(`⚠️  Version conflict on ${collectionName}, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+    await new Promise(resolve => setTimeout(resolve, backoffMs));
   }
 }
 

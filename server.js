@@ -22,6 +22,8 @@ const {
     logChatToBlockchain,
     logDocumentToBlockchain,
     logCreditScoreToBlockchain,
+    logDisbursementToBlockchain,
+    logPaymentToBlockchain,
     getUserMasterLedger,
     getUserCompleteHistory,
     getBlockchainStats,
@@ -197,11 +199,15 @@ app.post('/api/otp/reveal', async (req, res) => {
 
 // 1. Send OTP (User Login Step 1)
 app.post('/api/auth/send-otp', async (req, res) => {
+    console.log('🔥🔥🔥 [Server.js] /api/auth/send-otp endpoint HIT 🔥🔥🔥');
     try {
         const { name, accountNumber, phone } = req.body;
+        console.log(`[Server.js] About to call sendOTP with: name=${name}, accountNumber=${accountNumber}, phone=${phone}`);
         const result = await sendOTP({ name, accountNumber, phone });
+        console.log(`[Server.js] sendOTP returned:`, result);
         res.json({ ok: true, message: result.message, otpHash: result.otpHash }); // Return hash instead of OTP
     } catch (err) {
+        console.error(`[Server.js] ERROR in send-otp:`, err);
         res.status(400).json({ error: err.message });
     }
 });
@@ -210,7 +216,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { phone, otp, accountNumber } = req.body;
+        console.log(`[Auth] Login attempt: phone=${phone}, accountNumber=${accountNumber}`);
         const { token, user } = await verifyLoginOTP({ phone, otp, accountNumber });
+        console.log(`✅ [Auth] Login successful: userId=${user._id || user.phone}, email=${user.email}`);
         res.json({ ok: true, token, user });
     } catch (err) {
         res.status(401).json({ error: err.message });
@@ -239,6 +247,7 @@ app.post('/loan', async (req, res) => {
     try {
         // PHASE 1: Customer Entry & Intent Detection
         const { message, userData } = req.body;
+        const userId = userData.phone || userData.accountNumber || userData.userId || 'unknown';
         const { intent, sessionId } = await detectLoanIntent(message);
         // CIDs from this phase are logged internally by the agent
 
@@ -251,13 +260,13 @@ app.post('/loan', async (req, res) => {
         cids.push({ step: 'consent', cid: consentCid }, { step: 'dataCollection', cid: interactionCid });
 
         // PHASE 3: KYC & Identity Verification
-        const { kycStatus, reason: kycReason } = await verifyKYC(sessionId, userData.kycDocuments);
+        const { kycStatus, reason: kycReason } = await verifyKYC(sessionId, userData.kycDocuments, userId);
         if (kycStatus !== 'verified') {
             return res.status(200).json({ status: 'rejected', reason: kycReason || 'KYC failed', cids });
         }
 
         // PHASE 4: Credit Score & Financial Risk Analysis
-        const creditCheck = await analyzeCredit(sessionId, userData);
+        const creditCheck = await analyzeCredit(sessionId, userData, userId);
         cids.push({ step: 'creditAnalysis', cid: creditCheck.creditData.cid });
         if (!creditCheck.riskAcceptable) {
             return res.status(200).json({ status: 'rejected', reason: creditCheck.reason || 'Credit risk not acceptable', cids });
@@ -287,14 +296,59 @@ app.post('/loan', async (req, res) => {
         // PHASE 7: Sanction Letter Generation
         const { loanId, sanctionCid } = await generateSanctionLetter(sessionId, approvalDetails, finalOffer);
         cids.push({ step: 'sanction', cid: sanctionCid });
+        
+        // Log application to blockchain (immutable record)
+        if (blockchainInitialized) {
+            try {
+                await logApplicationToBlockchain({
+                    applicationId: loanId,
+                    userId: userId,
+                    customerName: userData.name || 'Customer',
+                    loanAmount: finalOffer.loanAmount,
+                    interestRate: finalOffer.interestRate,
+                    approvalScore: creditCheck.creditData.cibilScore,
+                    status: 'accepted',
+                    documentHash: sanctionCid
+                });
+                
+                // Log chat interaction
+                await logChatToBlockchain({
+                    sessionId,
+                    userId,
+                    message: 'Loan accepted',
+                    state: 'accepted',
+                    negotiationCount: 0,
+                    finalRate: finalOffer.interestRate
+                });
+            } catch (error) {
+                console.error('Blockchain logging error:', error.message);
+                // Continue even if blockchain logging fails
+            }
+        }
 
         // PHASE 8: Disbursement
-        const { disbursementCid } = await disburseFunds(sessionId, loanId, finalOffer);
+        const { disbursementCid } = await disburseFunds(sessionId, loanId, { ...finalOffer, userId }, userId);
         cids.push({ step: 'disbursement', cid: disbursementCid });
 
         // PHASE 9: Log first (mock) EMI payment for monitoring startup
-        const { paymentCid } = await logEmiPayment(loanId, { amount: 0, paymentDate: new Date().toISOString() });
+        const { paymentCid } = await logEmiPayment(loanId, { amount: 0, paymentDate: new Date().toISOString(), emiNumber: 1 }, userId);
         cids.push({ step: 'monitoring', cid: paymentCid });
+        
+        // Generate master contract after all blockchain transactions
+        if (blockchainInitialized) {
+            setTimeout(async () => {
+                try {
+                    console.log(`📄 Generating master contract for ${userId}...`);
+                    const masterResult = await generateAndUploadMasterContract(userId);
+                    if (masterResult.success) {
+                        console.log(`✅ Master contract uploaded to IPFS: ${masterResult.ipfsHash}`);
+                        console.log(`   📂 View at: ${masterResult.ipfsUrl}`);
+                    }
+                } catch (error) {
+                    console.error('Master contract generation error:', error.message);
+                }
+            }, 3000); // Wait 3 seconds for blockchain confirmations
+        }
 
         res.status(200).json({
             status: 'approved',
@@ -312,7 +366,8 @@ app.post('/loan', async (req, res) => {
 app.post('/payment', async (req, res) => {
     try {
         const { loanId, paymentData } = req.body;
-        const result = await logEmiPayment(loanId, paymentData);
+        const userId = paymentData.phone || paymentData.accountNumber || paymentData.userId || (req.user ? (req.user.phone || req.user._id?.toString()) : 'unknown');
+        const result = await logEmiPayment(loanId, paymentData, userId);
         res.status(200).json(result);
     } catch (error) {
         console.error("Payment logging failed:", error);
@@ -582,9 +637,12 @@ app.post('/api/chat', async (req, res) => {
             const finalRate = parseFloat(session.finalRate || adjustedRate);
             const approvedAmount = session.finalAmount || finalAmount;
             const emiData = generateEMISchedule(approvedAmount, finalRate, 36);
+            
+            const userId = customerData?.phone || customerData?.accountNumber || 'N/A';
 
             const app = {
                 _id: `LOAN-${sid.slice(-8)}`,
+                userId: userId,
                 customerName: name,
                 phone: customerData?.phone || 'N/A',
                 email: customerData?.email || 'N/A',
@@ -609,40 +667,201 @@ app.post('/api/chat', async (req, res) => {
             const db = getDB();
             await db.collection('applications').insertOne(app);
             
-            // Log application to blockchain (immutable record)
+            // Log to blockchain (immutable record)
             if (blockchainInitialized) {
-                logApplicationToBlockchain({
-                    applicationId: app._id,
-                    userId: customerData?.phone || customerData?.accountNumber,
-                    customerName: name,
-                    loanAmount: approvedAmount,
-                    interestRate: finalRate,
-                    approvalScore: score,
-                    status: 'accepted',
-                    documentHash: ''
-                }).catch(err => console.error('Blockchain logging error:', err));
-                
-                // Generate master contract JSON and upload to IPFS/Pinata
-                setTimeout(async () => {
-                    const userId = customerData?.phone || customerData?.accountNumber;
-                    console.log(`📄 Generating master contract for ${userId}...`);
-                    const masterResult = await generateAndUploadMasterContract(userId);
+                try {
+                    console.log(`🔗 [Blockchain] Starting transaction logging for ${userId}...`);
+                    
+                    // Helper to delay between transactions (avoid rate limiting)
+                    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+                    
+                    // 1. Log application/loan
+                    console.log(`  [1/6] Logging application...`);
+                    const appResult = await logApplicationToBlockchain({
+                        applicationId: app._id,
+                        userId: userId,
+                        customerName: name,
+                        loanAmount: approvedAmount,
+                        interestRate: finalRate,
+                        approvalScore: score,
+                        status: 'accepted',
+                        documentHash: ''
+                    });
+                    console.log(`  [1/6] Application: ${appResult.success ? '✅' : '❌'} ${appResult.transactionHash || appResult.error || ''}`);
+                    await delay(1500); // Wait 1.5s to avoid rate limiting
+                    
+                    // 2. Log documents (KYC)
+                    console.log(`  [2/6] Logging PAN document...`);
+                    const panResult = await logDocumentToBlockchain({
+                        documentId: `PAN_${sid}_${Date.now()}`,
+                        userId: userId,
+                        documentType: 'pan',
+                        verified: true,
+                        extractedData: { pan: customerData?.pan || 'XXXXXX1234' },
+                        ipfsHash: `ipfs_pan_${sid}`
+                    });
+                    console.log(`  [2/6] PAN: ${panResult.success ? '✅' : '❌'} ${panResult.transactionHash || panResult.error || ''}`);
+                    await delay(1500);
+                    
+                    console.log(`  [3/6] Logging Aadhaar document...`);
+                    const aadhaarResult = await logDocumentToBlockchain({
+                        documentId: `AADHAAR_${sid}_${Date.now()}`,
+                        userId: userId,
+                        documentType: 'aadhaar',
+                        verified: true,
+                        extractedData: { aadhaar: customerData?.aadhaar || 'XXXX XXXX 1234' },
+                        ipfsHash: `ipfs_aadhaar_${sid}`
+                    });
+                    await delay(1500);
+                    console.log(`  [3/6] Aadhaar: ${aadhaarResult.success ? '✅' : '❌'} ${aadhaarResult.transactionHash || aadhaarResult.error || ''}`);
+                    
+                    // 3. Log credit score
+                    console.log(`  [4/6] Logging credit score...`);
+                    const grade = score >= 750 ? 'A+' : score >= 700 ? 'A' : score >= 650 ? 'B' : score >= 600 ? 'C' : 'D';
+                    const creditResult = await logCreditScoreToBlockchain({
+                        userId: userId,
+                        score: score,
+                        grade: grade,
+                        preApprovedLimit: preApprovedLimit
+                    });
+                    await delay(1500);
+                    console.log(`  [4/6] Credit: ${creditResult.success ? '✅' : '❌'} ${creditResult.transactionHash || creditResult.error || ''}`);
+                    
+                    // 4. Log disbursement
+                    console.log(`  [5/6] Logging disbursement...`);
+                    const disburseResult = await logDisbursementToBlockchain({
+                        loanId: app._id,
+                        userId: userId,
+                        amount: approvedAmount,
+                        recipientAccount: customerData?.accountNumber || userId,
+                        transactionId: `TXN_${sid}_${Date.now()}`
+                    });
+                    await delay(1500);
+                    console.log(`  [5/6] Disbursement: ${disburseResult.success ? '✅' : '❌'} ${disburseResult.transactionHash || disburseResult.error || ''}`);
+                    
+                    // 5. Log first EMI (pending status)
+                    console.log(`  [6/6] Logging first EMI...`);
+                    const emiAmount = parseFloat(emiData.emi);
+                    const emiResult = await logPaymentToBlockchain({
+                        loanId: app._id,
+                        userId: userId,
+                        emiNumber: 1,
+                        amount: emiAmount,
+                        principalPaid: emiAmount * 0.7,
+                        interestPaid: emiAmount * 0.3,
+                        status: 'pending',
+                        receiptHash: `emi_1_${app._id}`
+                    });
+                    console.log(`  [6/6] EMI: ${emiResult.success ? '✅' : '❌'} ${emiResult.transactionHash || emiResult.error || ''}`);
+                    await delay(1500);
+                    
+                    // 7. Log chat interaction
+                    const chatResult = await logChatToBlockchain({
+                        sessionId: sid,
+                        userId: userId,
+                        message: 'Loan accepted',
+                        state: 'accepted',
+                        negotiationCount: session.negotiationCount,
+                        finalRate: finalRate
+                    });
+                    console.log(`  [+] Chat: ${chatResult.success ? '✅' : '❌'} ${chatResult.transactionHash || chatResult.error || ''}`);
+                    
+                    console.log(`✅ All blockchain transactions completed for ${userId}`);
+                    
+                    // **HYBRID MODE**: Generate master contract using LOCAL DATA + transaction hashes
+                    // This avoids querying blockchain (which hits rate limits) - uses MongoDB data instead
+                    console.log(`📄 [Hybrid] Generating master contract immediately using local data...`);
+                    const localData = {
+                        application: {
+                            _id: app._id,
+                            requestedAmount: requestedAmount,
+                            approvedAmount: approvedAmount,
+                            interestRate: adjustedRate,
+                            finalRate: finalRate,
+                            creditScore: score,
+                            preApprovedLimit: preApprovedLimit,
+                            status: 'accepted',
+                            sessionId: sid,
+                            acceptedAt: new Date().toISOString(),
+                            negotiationRound: session.negotiationCount || 0
+                        },
+                        customer: {
+                            name: name,
+                            phone: userId,
+                            pan: customerData?.pan || 'XXXXXX1234',
+                            aadhaar: customerData?.aadhaar || 'XXXX XXXX 1234',
+                            accountNumber: customerData?.accountNumber || userId
+                        },
+                        creditScore: {
+                            score: score,
+                            grade: grade
+                        },
+                        emiData: emiData,
+                        txHashes: {
+                            application: appResult.transactionHash || 'pending',
+                            pan: panResult.transactionHash || 'pending',
+                            aadhaar: aadhaarResult.transactionHash || 'pending',
+                            credit: creditResult.transactionHash || 'pending',
+                            disbursement: disburseResult.transactionHash || 'pending',
+                            emi: emiResult.transactionHash || 'pending',
+                            chat: chatResult.transactionHash || 'pending'
+                        }
+                    };
+                    
+                    // Generate master contract using hybrid mode (local data + tx hashes)
+                    const masterResult = await generateAndUploadMasterContract(userId, localData);
                     if (masterResult.success) {
-                        console.log(`✅ Master contract uploaded to IPFS: ${masterResult.ipfsHash}`);
+                        console.log(`✅ Master contract (hybrid) uploaded to IPFS: ${masterResult.ipfsHash}`);
                         console.log(`   📂 View at: ${masterResult.ipfsUrl}`);
                         
-                        // Update application with IPFS link
-                        await db.collection('applications').updateOne(
-                            { _id: app._id },
-                            { 
-                                $set: { 
-                                    masterContractIPFS: masterResult.ipfsHash,
-                                    masterContractUrl: masterResult.ipfsUrl 
-                                } 
+                        // Update application with IPFS link (non-blocking, best-effort)
+                        try {
+                            const updateResult = await db.collection('applications').updateOne(
+                                { 
+                                    _id: app._id,
+                                    status: 'accepted' 
+                                },
+                                { 
+                                    $set: { 
+                                        masterContractIPFS: masterResult.ipfsHash,
+                                        masterContractUrl: masterResult.ipfsUrl,
+                                        blockchainTxHashes: localData.txHashes // Store tx hashes for future verification
+                                    } 
+                                }
+                            );
+                            
+                            if (updateResult.modifiedCount === 0) {
+                                console.log('ℹ️  IPFS link not updated (status changed or document modified). Attempting unguarded update...');
+                                try {
+                                    const forceUpdate = await db.collection('applications').updateOne(
+                                        { _id: app._id },
+                                        { $set: {
+                                            masterContractIPFS: masterResult.ipfsHash,
+                                            masterContractUrl: masterResult.ipfsUrl,
+                                            blockchainTxHashes: localData.txHashes
+                                        } }
+                                    );
+                                    if (forceUpdate.modifiedCount > 0) {
+                                        console.log('✅ IPFS link + tx hashes force-updated successfully');
+                                    } else {
+                                        console.log('⚠️  Force update did not modify document (maybe identical values already present)');
+                                    }
+                                } catch (e) {
+                                    console.error('⚠️  Failed force-updating IPFS link:', e.message);
+                                }
+                            } else {
+                                console.log('✅ IPFS link + tx hashes updated successfully');
                             }
-                        );
+                        } catch (err) {
+                            console.error('⚠️  Failed to update IPFS link:', err.message);
+                        }
+                    } else {
+                        console.error('⚠️  Master contract generation failed:', masterResult.error);
                     }
-                }, 2000); // Wait 2 seconds for blockchain confirmation
+                } catch (err) {
+                    console.error('❌ Blockchain logging error:', err.message);
+                    console.error('   Stack:', err.stack);
+                }
             }
             
             session.applicationStored = true;
@@ -787,16 +1006,26 @@ app.get('/api/admin/chat-stats', authMiddleware, adminMiddleware, async (req, re
 app.get('/api/user/applications', authMiddleware, async (req, res) => {
     try {
         const db = getDB();
+        console.log('🔍 [API] /api/user/applications called');
+        console.log('   req.user:', req.user);
+        console.log('   Querying for:', { phone: req.user.phone, accountNumber: req.user.accountNumber });
+        
         const applications = await db.collection('applications')
             .find({
                 $or: [
                     { phone: req.user.phone },
                     { accountNumber: req.user.accountNumber },
-                    { userId: req.user._id?.toString() }
+                    { userId: req.user.phone },
+                    { userId: req.user.accountNumber }
                 ]
             })
             .sort({ submittedAt: -1 })
             .toArray();
+        
+        console.log('✅ [API] Found', applications.length, 'applications');
+        if (applications.length > 0) {
+            console.log('   First app:', { id: applications[0]._id, phone: applications[0].phone, userId: applications[0].userId });
+        }
         
         res.json({ ok: true, applications });
     } catch (err) {
@@ -887,7 +1116,7 @@ app.put('/api/applications/:id', authMiddleware, adminMiddleware, async (req, re
                 updatedBy: req.user.email,
                 adminNotes: notes || current.adminNotes
             }),
-            3 // max 3 retries
+            5 // max 5 retries with jitter
         );
 
         if (!result.success) {
@@ -1080,9 +1309,75 @@ app.post('/api/blockchain/user/:userId/master-contract', authMiddleware, async (
             return res.status(503).json({ error: 'Blockchain not available' });
         }
         
-        const result = regenerate 
-            ? await generateAndUploadMasterContract(userId)
-            : await getMasterContract(userId);
+        let result;
+        if (regenerate) {
+            // Check if we have application data for hybrid mode
+            const db = getDB();
+            const application = await db.collection('applications')
+                .findOne({ phone: userId }, { sort: { createdAt: -1 } });
+            
+            if (application && application.blockchainTxHashes) {
+                console.log(`📄 [Regenerate] Using HYBRID mode for ${userId} (tx hashes found)`);
+                // Reconstruct localData from application document for hybrid mode
+                const localData = {
+                    application: {
+                        _id: application._id,
+                        requestedAmount: application.requestedAmount,
+                        approvedAmount: application.amount || application.approvedAmount,
+                        interestRate: application.interestRate,
+                        finalRate: application.finalRate || application.interestRate,
+                        creditScore: application.approvalScore || application.creditScore,
+                        preApprovedLimit: application.maxLimit,
+                        status: application.status,
+                        sessionId: application.sessionId || `session_${application._id}`,
+                        acceptedAt: application.submittedAt,
+                        negotiationRound: 0
+                    },
+                    customer: {
+                        name: application.customerName,
+                        phone: application.phone,
+                        pan: application.documents?.pan || 'XXXXXX1234',
+                        aadhaar: application.documents?.aadhaar || 'XXXX XXXX 1234',
+                        accountNumber: application.accountNumber
+                    },
+                    creditScore: {
+                        score: application.approvalScore || application.creditScore || 0,
+                        grade: (application.approvalScore || 0) >= 750 ? 'A+' : 
+                               (application.approvalScore || 0) >= 700 ? 'A' : 
+                               (application.approvalScore || 0) >= 650 ? 'B' : 'C'
+                    },
+                    emiData: {
+                        emi: application.emi,
+                        tenure: application.tenure
+                    },
+                    txHashes: application.blockchainTxHashes
+                };
+                result = await generateAndUploadMasterContract(userId, localData);
+            } else {
+                console.log(`📄 [Regenerate] Using LEGACY mode for ${userId} (no tx hashes - querying blockchain)`);
+                result = await generateAndUploadMasterContract(userId);
+            }
+            
+            // Update application with new IPFS hash if successful
+            if (result.success && application) {
+                try {
+                    await db.collection('applications').updateOne(
+                        { _id: application._id },
+                        { 
+                            $set: { 
+                                masterContractIPFS: result.ipfsHash,
+                                masterContractUrl: result.ipfsUrl
+                            } 
+                        }
+                    );
+                    console.log(`✅ [Regenerate] Updated application ${application._id} with new IPFS hash`);
+                } catch (updateErr) {
+                    console.error('⚠️  Failed to update application with new IPFS hash:', updateErr.message);
+                }
+            }
+        } else {
+            result = await getMasterContract(userId);
+        }
         
         if (!result.success) {
             return res.status(500).json({ error: result.error });
@@ -1151,6 +1446,27 @@ app.get('/ready', async (req, res) => {
     } else {
         res.status(503).json({ ready: false });
     }
+});
+
+// Global error handlers to prevent crashes from async operations
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise);
+    console.error('   Reason:', reason);
+    // Don't exit - log and continue (especially for rate limit errors)
+    if (reason && (reason.statusCode === 429 || reason.code === 429)) {
+        console.error('   ⚠️  Rate limit error - will retry on next operation');
+    }
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    // For 429 errors, don't crash
+    if (error.statusCode === 429 || error.code === 429) {
+        console.error('   ⚠️  Rate limit error - continuing...');
+        return;
+    }
+    // For other critical errors, exit gracefully
+    console.error('   🔴 Critical error - server may be unstable');
 });
 
 app.listen(port, () => {

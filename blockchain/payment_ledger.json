@@ -119,5 +119,41 @@
     },
     "previousHash": "a419186ef48eb589fbcf7cdb6bea5005f71421c5b4bbce2835a5c7b72730bbe5",
     "hash": "24ef1fd4f75e34ee2b6529edd3f12d9e90e1004f259077b418fd2a7d8d2e8a06"
+  },
+  {
+    "data": {
+      "agent": "monitoringAgent",
+      "action": "logEmiPayment",
+      "loanId": "LOAN-62549843",
+      "paymentId": "e389bf3e0dc28508919b9d09d930c684293c28746d4d053b8ac5229add6c0dc3",
+      "amount": 1000,
+      "paymentDate": "2026-02-06T13:11:28.3953851+05:30",
+      "riskPrediction": {
+        "risk": "low",
+        "message": "Monitoring started."
+      },
+      "timestamp": "2026-02-06T07:43:07.978Z",
+      "cid": "QmXPip7vGqtH4TKAtc9fwUD7iBDkynddJjh3CLUzR7t8rD"
+    },
+    "previousHash": "24ef1fd4f75e34ee2b6529edd3f12d9e90e1004f259077b418fd2a7d8d2e8a06",
+    "hash": "845c373f1c85caf117e30ce0fb7c794e4e5f86f131616942b56a3c8c5e35fd9a"
+  },
+  {
+    "data": {
+      "agent": "monitoringAgent",
+      "action": "logEmiPayment",
+      "loanId": "LOAN-62549843",
+      "paymentId": "ff8e5d5f341cc6326f438941694a8bd849c0ea2fedaeb470bcfae533408b9c03",
+      "amount": 1000,
+      "paymentDate": "2026-02-06T13:14:20.1358377+05:30",
+      "riskPrediction": {
+        "risk": "low",
+        "message": "Monitoring started."
+      },
+      "timestamp": "2026-02-06T07:47:25.539Z",
+      "cid": "QmPNbxa8TMc1qRZozeB4uCHT77CYPKdh1va2LrHP7YrCg4"
+    },
+    "previousHash": "845c373f1c85caf117e30ce0fb7c794e4e5f86f131616942b56a3c8c5e35fd9a",
+    "hash": "4fe016193050f82b019b4624300f559b424f3490a3e7183b80e76bcf341a307d"
   }
 ]

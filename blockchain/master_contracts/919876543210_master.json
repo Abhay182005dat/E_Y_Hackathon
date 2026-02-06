@@ -2,8 +2,8 @@
   "version": "2.0",
   "architecture": "Modular Blockchain",
   "userId": "+919876543210",
-  "userIdHash": "0xf3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
-  "generated": "2026-02-05T17:49:53.298Z",
+  "userIdHash": "0xc7ecc8c6dfc0186d1c92b87ed038963992bf44768d0795a2fb81214af5eca63c",
+  "generated": "2026-02-05T19:32:41.132Z",
   "blockchain": {
     "network": "SEPOLIA",
     "loanCoreAddress": "0x342773f4f8d0614287EdF221c884Dcee84a29928",
@@ -13,7 +13,7 @@
   },
   "summary": {
     "totalLoans": 0,
-    "totalChats": 0,
+    "totalChats": 1,
     "totalDocuments": 0,
     "totalCredits": 0,
     "totalDisbursements": 0,
@@ -21,7 +21,16 @@
   },
   "transactions": {
     "loans": [],
-    "chatLogs": [],
+    "chatLogs": [
+      {
+        "sessionIdHash": "0x5a49aadb10acc098a92d4e203c5d9f832fbf8a4ca617ccb29346440ba6997485",
+        "messageHash": "0xea83cdcdd06bf61e414054115a551e23133711d0507dcbc07a4bab7dc4581935",
+        "state": "offered",
+        "negotiationCount": 0,
+        "finalRate": "0.00%",
+        "timestamp": "2026-02-05T17:47:12.000Z"
+      }
+    ],
     "documents": [],
     "creditHistory": [],
     "disbursements": [],

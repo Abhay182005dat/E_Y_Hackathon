@@ -55,10 +55,20 @@ export default function DashboardPage() {
     const fetchUserApplications = async () => {
         try {
             const token = localStorage.getItem('token');
+            console.log('📊 [Dashboard] Fetching applications for user:', user?.phone || user?.accountNumber);
+            console.log('   Token (first 20 chars):', token?.substring(0, 20));
+            
             const res = await fetch(`${API_URL}/api/user/applications`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
+            
+            console.log('📊 [Dashboard] Received applications:', data.applications?.length || 0);
+            if (data.applications?.length > 0) {
+                console.log('   First app phone:', data.applications[0].phone);
+                console.log('   First app userId:', data.applications[0].userId);
+            }
+            
             if (data.ok) {
                 setApplications(data.applications);
             }

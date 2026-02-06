@@ -4,6 +4,7 @@ const policies = require('../rag/policies.json');
 const { callGemini } = require('../utils/geminiClient');
 const { uploadJsonToPinata } = require('../utils/pinataClient');
 const { sha256 } = require('../utils/hash');
+const { logCreditScoreToBlockchain } = require('../blockchain/web3Client');
 
 function parseRiskResponse(rawResponse) {
     if (typeof rawResponse !== 'string') {
@@ -22,11 +23,16 @@ function parseRiskResponse(rawResponse) {
     }
 }
 
-async function analyzeCredit(sessionId, userData) {
+async function analyzeCredit(sessionId, userData, userId = null) {
     const { cibilScore } = userData;
 
     if (typeof cibilScore !== 'number') {
         throw new Error("CIBIL score is required for credit analysis.");
+    }
+    
+    // Extract userId if not provided
+    if (!userId) {
+        userId = userData.phone || userData.accountNumber || userData.userId || 'unknown';
     }
 
     const policy = policies.loanPolicies.find(p => cibilScore >= p.minCreditScore);
@@ -61,6 +67,22 @@ async function analyzeCredit(sessionId, userData) {
         cid,
         timestamp: new Date().toISOString()
     });
+    
+    // Log to blockchain
+    try {
+        const grade = cibilScore >= 750 ? 'A+' : cibilScore >= 700 ? 'A' : cibilScore >= 650 ? 'B' : cibilScore >= 600 ? 'C' : 'D';
+        const preApprovedLimit = cibilScore >= 750 ? 1000000 : cibilScore >= 700 ? 500000 : cibilScore >= 650 ? 300000 : 100000;
+        
+        await logCreditScoreToBlockchain({
+            userId,
+            score: cibilScore,
+            grade,
+            preApprovedLimit
+        });
+    } catch (error) {
+        console.error('Failed to log credit to blockchain:', error.message);
+        // Continue even if blockchain logging fails
+    }
 
     return { 
         riskAcceptable: riskDecision !== 'high',

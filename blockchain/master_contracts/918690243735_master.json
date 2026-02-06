@@ -1,0 +1,126 @@
+{
+  "version": "2.0",
+  "architecture": "Modular Blockchain",
+  "userId": "+918690243735",
+  "userIdHash": "0x3e6e1e7a55aa10a27f32c657f9e083f79c8d783e0ed9b42bd2598ba1a0565f7b",
+  "generated": "2026-02-06T09:17:59.913Z",
+  "blockchain": {
+    "network": "SEPOLIA",
+    "loanCoreAddress": "0x342773f4f8d0614287EdF221c884Dcee84a29928",
+    "creditRegistryAddress": "0x62C93f5E4E3d22fD6336CB0aEA99e0C87A6B47aD",
+    "paymentLedgerAddress": "0xd314fB3A9367909F5Da1Ad221b75daF6AFDf3785",
+    "explorerUrl": "https://sepolia.etherscan.io/address/0x342773f4f8d0614287EdF221c884Dcee84a29928"
+  },
+  "summary": {
+    "totalLoans": 4,
+    "totalChats": 6,
+    "totalDocuments": 1,
+    "totalCredits": 0,
+    "totalDisbursements": 0,
+    "totalEMIs": 0
+  },
+  "transactions": {
+    "loans": [
+      {
+        "loanIdHash": "0x3b48e98d8497c6e729a867e48bdeff3dc27c06ff0062c06903c49dbadec64eaa",
+        "amount": "500000",
+        "interestRate": "9.50%",
+        "score": 720,
+        "status": "accepted",
+        "timestamp": "2026-02-06T06:42:12.000Z"
+      },
+      {
+        "loanIdHash": "0xe24e55dd46593dd1b827afc975399472d07c38c3e9f4ea62e4a7c0b753b7e525",
+        "amount": "50000",
+        "interestRate": "8.50%",
+        "score": 720,
+        "status": "accepted",
+        "timestamp": "2026-02-06T07:05:12.000Z"
+      },
+      {
+        "loanIdHash": "0x65bfce8bb4f38ee33c135acda647d28a79a46a88c54e745661b438ba5320ad06",
+        "amount": "51666",
+        "interestRate": "8.50%",
+        "score": 720,
+        "status": "accepted",
+        "timestamp": "2026-02-06T07:15:48.000Z"
+      },
+      {
+        "loanIdHash": "0x2bf237375bf1203ff0651cc61fa7dca3dee5d96f6f2e51a9ed74f69a8ae8ebeb",
+        "amount": "51666",
+        "interestRate": "8.50%",
+        "score": 720,
+        "status": "accepted",
+        "timestamp": "2026-02-06T07:26:24.000Z"
+      }
+    ],
+    "chatLogs": [
+      {
+        "sessionIdHash": "0xcb24b7a6d4d3c1ce312664921f8bf50f42f0ebf9db376c9ad496c57e64e59340",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "offered",
+        "negotiationCount": 0,
+        "finalRate": "0.00%",
+        "timestamp": "2026-02-06T06:41:24.000Z"
+      },
+      {
+        "sessionIdHash": "0xac48ffdbd4a4fa947b9a1c81dc17ff6ac7d6df9d1ae2b926238f400f2fc04c3d",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "offered",
+        "negotiationCount": 0,
+        "finalRate": "0.00%",
+        "timestamp": "2026-02-06T07:05:12.000Z"
+      },
+      {
+        "sessionIdHash": "0xac48ffdbd4a4fa947b9a1c81dc17ff6ac7d6df9d1ae2b926238f400f2fc04c3d",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "accepted",
+        "negotiationCount": 0,
+        "finalRate": "8.50%",
+        "timestamp": "2026-02-06T07:05:12.000Z"
+      },
+      {
+        "sessionIdHash": "0x83272c6211f4bbb84156ebc961ec02133027773baca076b5a4ad8ea1ba368cb0",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "offered",
+        "negotiationCount": 0,
+        "finalRate": "0.00%",
+        "timestamp": "2026-02-06T07:15:24.000Z"
+      },
+      {
+        "sessionIdHash": "0x83272c6211f4bbb84156ebc961ec02133027773baca076b5a4ad8ea1ba368cb0",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "accepted",
+        "negotiationCount": 0,
+        "finalRate": "8.50%",
+        "timestamp": "2026-02-06T07:15:48.000Z"
+      },
+      {
+        "sessionIdHash": "0xbde54a33c72325db32d81912542b97b46eb5a2e3d409347d00e8fc9c961d12d9",
+        "messageHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "offered",
+        "negotiationCount": 0,
+        "finalRate": "0.00%",
+        "timestamp": "2026-02-06T07:26:00.000Z"
+      }
+    ],
+    "documents": [
+      {
+        "docIdHash": "0xd5be3f0876dd630d1f311f758387402c98410e2a160853b3e7325c24dacf7d04",
+        "documentType": "pan",
+        "verified": true,
+        "dataHash": "0x3c6f23f6ea77790c72ee2997135124dc0ff7f11e714131bbe8bfadae34c9040a",
+        "ipfsHash": "0x6217017058ce219c6624e24b0fb3f3039a1738ad756645992e08cd8cfc83a1b6",
+        "timestamp": "2026-02-06T07:36:12.000Z"
+      }
+    ],
+    "creditHistory": [],
+    "disbursements": [],
+    "emis": []
+  },
+  "verification": {
+    "note": "All hashes use keccak256. Full data stored off-chain (MongoDB + IPFS)",
+    "blockchainProof": "Verify on-chain at explorer URLs above",
+    "architecture": "Production-grade modular contracts with hash-based storage"
+  }
+}
