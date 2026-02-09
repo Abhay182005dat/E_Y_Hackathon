@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -272,6 +272,78 @@ export default function ApplyPage() {
         salarySlip: null
     });
 
+    // Live photo capture state
+    const [livePhoto, setLivePhoto] = useState(null);
+    const [cameraActive, setCameraActive] = useState(false);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const streamRef = useRef(null);
+
+    // Start camera - get stream first, then activate camera UI
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+            });
+            streamRef.current = stream;
+            setCameraActive(true); // This triggers video element to render
+        } catch (err) {
+            console.error('Camera error:', err);
+            setError('Camera access denied. Please allow camera permissions.');
+        }
+    };
+
+    // Attach stream to video when video element mounts
+    useEffect(() => {
+        if (cameraActive && videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+            videoRef.current.play().catch(console.error);
+        }
+    }, [cameraActive]);
+
+    // Stop camera
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        setCameraActive(false);
+    };
+
+    // Capture and compress photo
+    const capturePhoto = () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        // Use actual video dimensions, fallback to display dimensions
+        const videoWidth = video.videoWidth || video.clientWidth || 640;
+        const videoHeight = video.videoHeight || video.clientHeight || 480;
+
+        // Resize to max 640px width for compression
+        const maxWidth = 640;
+        const scale = Math.min(maxWidth / videoWidth, 1);
+        canvas.width = videoWidth * scale;
+        canvas.height = videoHeight * scale;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Compress to JPEG 70%
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], `live_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                setLivePhoto(file);
+                stopCamera();
+                console.log(`📸 Photo captured: ${(blob.size / 1024).toFixed(1)}KB`);
+            }
+        }, 'image/jpeg', 0.7);
+    };
+
+    // Cleanup camera on unmount
+    useEffect(() => {
+        return () => stopCamera();
+    }, []);
+
     // Verification results
     const [verification, setVerification] = useState(null);
     const [approvalScore, setApprovalScore] = useState(null);
@@ -284,9 +356,9 @@ export default function ApplyPage() {
 
     const preApprovedLimit = approvalScore?.preApprovedLimit || { limit: 500000, interestRate: 12, maxEMI: 25000 };
     const journeySteps = ['Document Upload', 'Verification', 'Loan Chat'];
-    const displayScore = approvalScore?.approvalScore?.score || 720;
-    const confidenceLabel = displayScore >= 700 ? 'High confidence' : 'Moderate confidence';
-    const scoreRange = `${Math.max(displayScore - 40, 300)} - 900`;
+    const displayScore = approvalScore?.approvalScore?.score || null; // Remove hardcoded 720
+    const confidenceLabel = displayScore >= 700 ? 'High confidence' : displayScore >= 650 ? 'Moderate confidence' : 'Low confidence';
+    const scoreRange = displayScore ? `${Math.max(displayScore - 40, 300)} - 900` : '300 - 900';
 
     // Chat state
     const [messages, setMessages] = useState([]);
@@ -299,6 +371,103 @@ export default function ApplyPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    // SESSION PERSISTENCE: Save state on change
+    useEffect(() => {
+        if (step > 1 || formData.name) {
+            const state = {
+                step,
+                formData,
+                approvalScore,
+                verification
+            };
+            localStorage.setItem('apply_session', JSON.stringify(state));
+        }
+    }, [step, formData, approvalScore, verification]);
+
+    // SESSION PERSISTENCE: Restore state on mount
+    useEffect(() => {
+        // Wait for auth to finish loading before restoring
+        if (authLoading) return;
+
+        // Check if user wants to start fresh (coming from dashboard with ?fresh=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceFresh = urlParams.get('fresh') === 'true';
+
+        if (forceFresh) {
+            localStorage.removeItem('apply_session');
+            // Remove the ?fresh param from URL without reload
+            window.history.replaceState({}, '', '/apply');
+            console.log('🆕 Starting fresh application (forced by URL parameter)');
+            return; // Don't restore session
+        }
+
+        const saved = localStorage.getItem('apply_session');
+        if (saved && user) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Only restore if it matches current user (security check)
+                if (parsed.formData?.phone === user.phone) {
+                    // If loan was already submitted (step 3 with completed status), start fresh
+                    if (parsed.step === 3 && parsed.loanSubmitted) {
+                        localStorage.removeItem('apply_session');
+                        console.log('🆕 Previous loan was submitted. Starting fresh.');
+                        return;
+                    }
+                    setStep(parsed.step || 1);
+                    setFormData(parsed.formData || formData);
+                    setApprovalScore(parsed.approvalScore || null);
+                    setVerification(parsed.verification || null);
+                    console.log('🔄 Session restored from localStorage');
+                }
+            } catch (e) {
+                console.error('Failed to restore session:', e);
+                localStorage.removeItem('apply_session');
+            }
+        }
+    }, [user, authLoading]);
+
+    // Function to reset session and start fresh
+    const resetSession = () => {
+        localStorage.removeItem('apply_session');
+        setStep(1);
+        setFormData({
+            name: user?.name || '',
+            phone: user?.phone || '',
+            email: user?.email || '',
+            accountNumber: user?.accountNumber || '',
+            pan: '',
+            monthlySalary: '',
+            loanAmount: '',
+            existingEMI: '0'
+        });
+        setApprovalScore(null);
+        setVerification(null);
+        setMessages([]);
+        setChatSessionId(null);
+        setError(null);
+        console.log('🔄 Session reset. Starting fresh application.');
+    };
+
+    // Clear session when user navigates away (e.g., to dashboard)
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // Check if there's a completed application (step 3 with messages)
+            if (step === 3 && messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                // If last bot message indicates submission, clear session
+                if (lastMessage.role === 'bot' &&
+                    (lastMessage.content.toLowerCase().includes('submitted') ||
+                        lastMessage.content.toLowerCase().includes('approved'))) {
+                    localStorage.removeItem('apply_session');
+                    console.log('🗑️  Session cleared on navigation (loan submitted)');
+                }
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [step, messages]);
+
     // Restore chat session when entering step 3
     useEffect(() => {
         const restoreSession = async () => {
@@ -307,7 +476,7 @@ export default function ApplyPage() {
                 try {
                     // Generate a consistent session ID based on user
                     const userSessionId = chatSessionId || `session_${user.phone}_${Date.now()}`;
-                    
+
                     const res = await fetch(`${API_URL}/api/chat/restore`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -321,12 +490,12 @@ export default function ApplyPage() {
 
                     if (data.ok) {
                         setChatSessionId(data.sessionId);
-                        
+
                         if (data.restored && data.messages && data.messages.length > 0) {
                             // Restore previous messages
                             setMessages(data.messages);
                             console.log(`✅ Session restored: ${data.sessionId} (${data.messages.length} messages)`);
-                            
+
                             // Show restoration message
                             setTimeout(() => {
                                 setMessages(prev => [...prev, {
@@ -337,7 +506,7 @@ export default function ApplyPage() {
                         } else {
                             console.log(`✨ New session created: ${data.sessionId}`);
                         }
-                        
+
                         setSessionRestored(true);
                     }
                 } catch (err) {
@@ -369,6 +538,7 @@ export default function ApplyPage() {
             if (documents.pan) formDataAPI.append('pan', documents.pan);
             if (documents.bankStatement) formDataAPI.append('bankStatement', documents.bankStatement);
             if (documents.salarySlip) formDataAPI.append('salarySlip', documents.salarySlip);
+            if (livePhoto) formDataAPI.append('livePhoto', livePhoto);
 
             const res = await fetch(`${API_URL}/api/verify-docs`, {
                 method: 'POST',
@@ -398,6 +568,7 @@ export default function ApplyPage() {
                 const scoreData = await scoreRes.json();
                 if (scoreData.ok) {
                     setApprovalScore(scoreData);
+                    console.log("this is the approval score:", scoreData);
                 }
 
                 setStep(2);
@@ -407,6 +578,7 @@ export default function ApplyPage() {
         } catch (err) {
             setError('Connection error: ' + err.message);
         }
+
 
         setLoading(false);
     };
@@ -428,7 +600,8 @@ export default function ApplyPage() {
                     message: userText,
                     customerData: formData,
                     creditScore: approvalScore, // Backend still expects this key
-                    sessionId: chatSessionId
+                    sessionId: chatSessionId,
+                    documents: verification?.documents || null // Pass actual OCR document data
                 })
             });
 
@@ -437,6 +610,25 @@ export default function ApplyPage() {
             if (data.ok && data.response) {
                 if (data.sessionId) setChatSessionId(data.sessionId);
                 setMessages(prev => [...prev, { role: 'bot', content: data.response }]);
+
+                // Update loan amount if chatbot modified it
+                if (data.updatedLoanAmount) {
+                    setFormData(prev => ({ ...prev, loanAmount: data.updatedLoanAmount }));
+                    console.log(`💰 Loan amount updated to: ₹${data.updatedLoanAmount}`);
+                }
+
+                // Check if loan was submitted
+                const responseText = data.response.toLowerCase();
+                if (data.submitted || responseText.includes('application submitted') ||
+                    responseText.includes('loan has been submitted') ||
+                    responseText.includes('successfully submitted') ||
+                    responseText.includes('application has been submitted')) {
+                    console.log('✅ Loan submitted! Clearing session in 3 seconds...');
+                    setTimeout(() => {
+                        localStorage.removeItem('apply_session');
+                        console.log('🗑️  Session cleared. User can now start a new application.');
+                    }, 3000);
+                }
             } else {
                 setMessages(prev => [...prev, { role: 'bot', content: data.error || 'Sorry, I encountered an error.' }]);
             }
@@ -571,6 +763,96 @@ export default function ApplyPage() {
                                 </label>
                             ))}
                         </div>
+
+                        {/* Live Photo Capture Section */}
+                        <div style={{
+                            borderRadius: '20px',
+                            border: '1px solid rgba(59,130,246,0.4)',
+                            padding: '20px',
+                            background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(15,23,42,0.5))',
+                            marginBottom: '20px',
+                            textAlign: 'center'
+                        }}>
+                            <h3 style={{ margin: '0 0 12px', color: '#fff', fontSize: '16px' }}>📸 Live Photo Verification</h3>
+                            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>Take a selfie for identity verification</p>
+
+                            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                            {!cameraActive && !livePhoto && (
+                                <button
+                                    type="button"
+                                    onClick={startCamera}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '12px 24px', borderRadius: '12px' }}
+                                >
+                                    📷 Open Camera
+                                </button>
+                            )}
+
+                            {cameraActive && (
+                                <div>
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        style={{
+                                            width: '100%',
+                                            maxWidth: '320px',
+                                            borderRadius: '12px',
+                                            marginBottom: '12px',
+                                            border: '2px solid rgba(59,130,246,0.5)'
+                                        }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                                        <button
+                                            type="button"
+                                            onClick={capturePhoto}
+                                            className="btn btn-primary"
+                                            style={{ padding: '10px 20px' }}
+                                        >
+                                            📸 Capture
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={stopCamera}
+                                            className="btn btn-secondary"
+                                            style={{ padding: '10px 20px' }}
+                                        >
+                                            ✕ Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {livePhoto && (
+                                <div>
+                                    <img
+                                        src={URL.createObjectURL(livePhoto)}
+                                        alt="Captured"
+                                        style={{
+                                            width: '100%',
+                                            maxWidth: '200px',
+                                            borderRadius: '12px',
+                                            marginBottom: '12px',
+                                            border: '2px solid var(--success)'
+                                        }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                                        <span style={{ color: 'var(--success)', fontSize: '14px' }}>✓ Photo captured</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setLivePhoto(null); startCamera(); }}
+                                            className="btn btn-secondary"
+                                            style={{ padding: '6px 12px', fontSize: '12px' }}
+                                        >
+                                            Retake
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div style={infoStripStyle}>
                             <strong>Instant verification</strong> • identity and income files are matched against secure data sources in under 2 minutes.
                         </div>

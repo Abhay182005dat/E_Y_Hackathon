@@ -70,12 +70,12 @@ async function resumeIncompleteSessions(db) {
     for (const key of keys) {
       const session = JSON.parse(await redisClient.get(key));
       const eventId = session.eventId;
-      
+
       console.log(`[${WORKER_ID}] Resuming session: ${eventId}`);
-      
+
       // Fetch event from DB
-      const event = await db.collection('events').findOne({ 
-        _id: new (require('mongodb').ObjectId)(eventId) 
+      const event = await db.collection('events').findOne({
+        _id: new (require('mongodb').ObjectId)(eventId)
       });
 
       if (event && event.status === 'claimed') {
@@ -107,7 +107,8 @@ async function processApproval(event, db) {
       const { writeLedger } = require('../blockchain/ledger');
 
       // Calculate approval score
-      const score = calculateCreditScore(event.payload.applicantData);
+      const scoreResult = calculateCreditScore(event.payload.applicantData);
+      const score = scoreResult.score || scoreResult; // Handle object vs number return
 
       // Write to ledger
       const ledgerEntry = {
@@ -146,7 +147,7 @@ async function processApproval(event, db) {
   } catch (error) {
     console.error(`[${WORKER_ID}] ❌ Approval failed:`, error.message);
     await failEvent(db, event._id, error.message);
-    
+
     // Keep session in Redis for manual recovery/debugging
     const sessionKey = `worker:session:${event._id}`;
     await redisClient.expire(sessionKey, 86400); // Extend to 24 hours for failed events
@@ -156,12 +157,12 @@ async function processApproval(event, db) {
 async function startWorker() {
   const { db } = await connectDB();
   await initRedis();
-  
+
   console.log(`[${WORKER_ID}] Approval worker started. Checking for incomplete sessions...`);
-  
+
   // Resume any incomplete sessions from previous crash
   await resumeIncompleteSessions(db);
-  
+
   console.log(`[${WORKER_ID}] Now polling for new events...`);
 
   while (true) {

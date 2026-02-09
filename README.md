@@ -171,12 +171,17 @@ This is a **smart loan application system** for banks and financial institutions
      - PAN Card
      - Bank Statement (last 6 months)
      - Salary Slip
+   - **📸 Takes Live Photo** (selfie for identity verification)
+     - Camera captures face directly in browser
+     - Image compressed to ~50KB for fast upload
+     - Stored securely for admin review
 
 4. **System Processes Documents (Auto)**
    - OCR scans Aadhaar → Extracts: Name, DOB, Address (File: `utils/ocr.js`)
    - OCR scans PAN → Validates PAN number (File: `utils/ocr.js`)
    - OCR scans Bank Statement → Calculates avg balance (File: `utils/ocr.js`)
    - OCR scans Salary Slip → Verifies income (File: `utils/ocr.js`)
+   - **Live Photo** → Saved for admin identity verification
    - **Time taken: 2 minutes**
 
 5. **Credit Score Calculation**
@@ -704,7 +709,55 @@ Request 4 → Backend-1 (1 connection) ← least loaded
 
 ## Key Features Deep Dive
 
-### 1. OTP Authentication with SHA-256 Hash
+### 1. 📸 Live Photo Capture for Identity Verification
+
+**Why Live Photo?**
+- **Fraud Prevention:** Ensures the applicant is a real person (not using stolen documents)
+- **KYC Compliance:** Visual identity verification for banking regulations
+- **Admin Confidence:** Admins can visually match face to Aadhaar/PAN photo
+
+**How It Works:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 1: User clicks "Open Camera" on Apply page           │
+│  Browser requests camera permission                         │
+│  File: frontend/app/apply/page.jsx                          │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 2: Live video preview appears                         │
+│  User positions their face in frame                         │
+│  Uses navigator.mediaDevices.getUserMedia()                 │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 3: User clicks "Capture"                              │
+│  Photo compressed to ~50KB (JPEG 70%, max 640px width)      │
+│  Reduces upload time and storage costs                      │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 4: Photo sent with document verification              │
+│  Saved to: uploads/public/ (served via static route)        │
+│  Path stored in MongoDB: documents.livePhoto                │
+│  File: server.js (multer dynamic destination)               │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 5: Admin sees photo in Application Details modal      │
+│  Can compare with Aadhaar/PAN photos for verification       │
+│  File: frontend/app/admin/page.jsx                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Security Features:**
+- **Isolated Storage:** Live photos stored in `uploads/public/` (publicly accessible)
+- **Private Documents:** Aadhaar/PAN stored in `uploads/` (NOT publicly accessible)
+- **CORS Enabled:** Admin panel can load images cross-origin
+
+---
+
+### 2. OTP Authentication with SHA-256 Hash
 
 **Why Hash Instead of Plain OTP?**
 - **Security:** Plain OTP in console can be accidentally committed to Git

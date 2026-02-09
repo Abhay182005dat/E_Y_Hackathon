@@ -8,6 +8,84 @@ const Tesseract = require('tesseract.js');
 const stringSimilarity = require('string-similarity');
 const fs = require('fs');
 const path = require('path');
+const pdfPoppler = require('pdf-poppler');
+
+/**
+ * Universal OCR function handling Images and PDFs (Text & Scanned)
+ * @param {Buffer|string} fileBufferOrPath - File buffer or path
+ * @param {string} mimeType - 'application/pdf' or image mime type (optional if path provided)
+ */
+async function performOCR(fileBufferOrPath, mimeType) {
+    let filePath = fileBufferOrPath;
+    let cleanup = false;
+
+    // maintain temp file if buffer provided
+    if (Buffer.isBuffer(fileBufferOrPath)) {
+        const ext = mimeType === 'application/pdf' ? '.pdf' : '.png';
+        filePath = path.join(__dirname, `../uploads/temp_ocr_${Date.now()}${ext}`);
+        fs.writeFileSync(filePath, fileBufferOrPath);
+        cleanup = true;
+    }
+
+    try {
+        console.log(`[OCR] Starting processing for: ${filePath}`);
+        let text = '';
+
+        if (filePath.toLowerCase().endsWith('.pdf')) {
+            // Try text extraction first
+            text = await extractPdfText(filePath);
+
+            // If text extraction yielded little result (< 50 chars), try scanned pipeline
+            if (!text || text.length < 50 || text.includes('[SCANNED_PDF')) {
+                console.log('[OCR] PDF appears to be scanned. Converting to images...');
+
+                const outputDir = path.dirname(filePath);
+                const opts = {
+                    format: 'png',
+                    out_dir: outputDir,
+                    out_prefix: path.basename(filePath, path.extname(filePath)),
+                    page: null // all pages
+                };
+
+                try {
+                    await pdfPoppler.convert(filePath, opts);
+
+                    // Find generated images
+                    const files = fs.readdirSync(outputDir).filter(f =>
+                        f.startsWith(opts.out_prefix) && f.endsWith('.png')
+                    );
+
+                    console.log(`[OCR] Converted PDF to ${files.length} images. Running OCR...`);
+
+                    for (const file of files) {
+                        const imgPath = path.join(outputDir, file);
+                        const pageText = await ocrImage(imgPath);
+                        text += `\n--- Page ${file} ---\n` + pageText;
+
+                        // Cleanup image
+                        fs.unlinkSync(imgPath);
+                    }
+                } catch (pdfErr) {
+                    console.error('[OCR] PDF conversion failed:', pdfErr.message);
+                    // Fallback to what we had (maybe empty)
+                }
+            }
+        } else {
+            // Standard image OCR
+            text = await ocrImage(filePath);
+        }
+
+        return text;
+
+    } catch (err) {
+        console.error('[OCR] Critical error:', err);
+        throw err;
+    } finally {
+        if (cleanup && fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+}
 
 // ==================== PDF TEXT EXTRACTION ====================
 
@@ -187,14 +265,15 @@ function namesMatch(a = '', b = '', threshold = 0.75) {
 
 async function parseAadhaar(imagePath, opts = {}) {
     const langs = opts.langs || ['eng'];
-    const text = await ocrImage(imagePath, langs);
+    // Use performOCR to support scanned PDFs
+    const mime = imagePath.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+    const text = await performOCR(imagePath, mime);
 
     const aadhaar = extractAadhaarNumber(text);
     const name = findLabelValue(text, ['name', 'name :', 'नाम']);
     const address = findLabelValue(text, ['address', 'addr', 'पता']);
     const dob = findLabelValue(text, ['dob', 'date of birth', 'जन्म']);
     const gender = findLabelValue(text, ['male', 'female', 'पुरुष', 'महिला']);
-
     return {
         rawText: text,
         aadhaar,
@@ -204,12 +283,15 @@ async function parseAadhaar(imagePath, opts = {}) {
         gender,
         aadhaarLast4: aadhaar ? aadhaar.slice(-4) : null,
         confidence: aadhaar ? 0.8 : 0.3
+
     };
 }
 
 async function parsePAN(imagePath, opts = {}) {
     const langs = opts.langs || ['eng'];
-    const text = await ocrImage(imagePath, langs);
+    // Use performOCR to support scanned PDFs
+    const mime = imagePath.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+    const text = await performOCR(imagePath, mime);
 
     const pan = extractPAN(text);
     const name = findLabelValue(text, ['name', "holder's name", 'नाम']);
@@ -232,7 +314,9 @@ async function parsePAN(imagePath, opts = {}) {
 
 async function parseBankStatement(imagePath, opts = {}) {
     const langs = opts.langs || ['eng'];
-    const text = await ocrImage(imagePath, langs);
+    // Use performOCR to support scanned PDFs
+    const mime = imagePath.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+    const text = await performOCR(imagePath, mime);
 
     // Account number
     const accMatch = text.match(/(?:A\/C|Account|Acc\.?\s*No\.?)\s*[:\-]?\s*(\d{9,18})/i);
@@ -276,21 +360,48 @@ async function parseBankStatement(imagePath, opts = {}) {
 
 async function parseSalarySlip(imagePath, opts = {}) {
     const langs = opts.langs || ['eng'];
-    const text = await ocrImage(imagePath, langs);
+    // Use performOCR to support scanned PDFs
+    const mime = imagePath.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+    const text = await performOCR(imagePath, mime);
 
-    // Employee name
-    const nameMatch = text.match(/(?:Employee Name|Name)\s*[:\-]?\s*([A-Za-z\s]+)/i);
+    // Employee name - more flexible patterns
+    const nameMatch = text.match(/(?:Employee Name|Name|Employee)\s*[:\-]?\s*([A-Za-z\s]+?)(?:\s+Employee ID|\s+ID|\s+Designation|$)/i);
     const employeeName = nameMatch ? nameMatch[1].trim() : null;
 
-    // Parse amount helper
+    // Parse amount helper - handle ₹, Rs., ¥, commas, and various formats
     const parseAmount = (pattern) => {
         const match = text.match(pattern);
-        return match ? parseFloat(match[1].replace(/,/g, '')) : null;
+        if (match) {
+            // Extract numeric part, remove commas and currency symbols
+            const numStr = match[1].replace(/[,₹¥]/g, '').replace(/Rs\.?/gi, '').trim();
+            const parsed = parseFloat(numStr);
+            console.log(`   Pattern: ${pattern}, Match: ${match[0]}, Extracted: ${numStr}, Parsed: ${parsed}`);
+            return isNaN(parsed) ? null : parsed;
+        }
+        return null;
     };
 
-    const basicSalary = parseAmount(/(?:Basic|Basic Salary)\s*[:\-]?\s*(?:Rs\.?|₹)?\s*([\d,]+)/i);
-    const grossSalary = parseAmount(/(?:Gross|Gross Salary)\s*[:\-]?\s*(?:Rs\.?|₹)?\s*([\d,]+)/i);
-    const netSalary = parseAmount(/(?:Net|Net Salary|Take Home)\s*[:\-]?\s*(?:Rs\.?|₹)?\s*([\d,]+)/i);
+    // Try multiple patterns for each field
+    const basicSalary = parseAmount(/(?:Basic|Basic Salary)\s*[:\-]?\s*(?:Rs\.?|₹|¥)?\s*([0-9,]+)/i);
+
+    // Gross Salary - try both "Gross Salary" and "Gross Earnings"
+    let grossSalary = parseAmount(/(?:Gross Salary)\s*[:\-]?\s*(?:Rs\.?|₹|¥)?\s*([0-9,]+)/i);
+    if (!grossSalary) {
+        grossSalary = parseAmount(/(?:Gross Earnings|Gross)\s+([0-9,]+)/i);
+    }
+
+    // Net Salary - try multiple patterns
+    let netSalary = parseAmount(/(?:Net Salary|Net Pay|Take Home)\s*[:\-]?\s*(?:Rs\.?|₹|¥)?\s*([0-9,]+)/i);
+    if (!netSalary) {
+        // Try pattern with colon and symbol: "Net Salary: ¥51,666"
+        netSalary = parseAmount(/Net Salary\s*:\s*[₹¥]\s*([0-9,]+)/i);
+    }
+
+    console.log(`\n🔍 SALARY SLIP PARSING DEBUG:`);
+    console.log(`   Employee Name Match: ${nameMatch ? nameMatch[0] : 'Not found'}`);
+    console.log(`   Basic Salary: ₹${basicSalary || 'N/A'}`);
+    console.log(`   Gross Salary: ₹${grossSalary || 'N/A'}`);
+    console.log(`   Net Salary: ₹${netSalary || 'N/A'}`);
 
     return {
         rawText: text,
@@ -304,7 +415,7 @@ async function parseSalarySlip(imagePath, opts = {}) {
 
 // ==================== FRAUD DETECTION ====================
 
-function performFraudCheck(documents) {
+function performFraudCheck(documents, customerData = null) {
     const issues = [];
     let riskScore = 0;
 
@@ -344,12 +455,44 @@ function performFraudCheck(documents) {
         riskScore += 30;
     }
 
-    // Check 4: Salary consistency
+    // Check 4: Salary consistency between documents
     if (salarySlip?.netSalary && bankStatement?.estimatedMonthlySalary) {
         const diff = Math.abs(salarySlip.netSalary - bankStatement.estimatedMonthlySalary);
         if (diff / salarySlip.netSalary > 0.3) {
-            issues.push({ type: 'SALARY_MISMATCH', severity: 'medium', message: 'Salary mismatch' });
+            issues.push({ type: 'SALARY_MISMATCH', severity: 'medium', message: 'Salary mismatch between documents' });
             riskScore += 15;
+        }
+    }
+
+    // Check 5: User-entered salary vs Salary Slip verification
+    if (customerData?.monthlySalary && salarySlip?.netSalary) {
+        const enteredSalary = parseInt(customerData.monthlySalary);
+        const extractedSalary = salarySlip.netSalary;
+        const diff = Math.abs(enteredSalary - extractedSalary);
+        const percentDiff = (diff / extractedSalary) * 100;
+
+        if (percentDiff > 20) { // More than 20% difference
+            issues.push({
+                type: 'USER_SALARY_MISMATCH',
+                severity: 'high',
+                message: `User entered salary (₹${enteredSalary}) differs from salary slip (₹${extractedSalary}) by ${percentDiff.toFixed(0)}%`,
+                details: {
+                    enteredSalary,
+                    extractedSalary,
+                    difference: diff,
+                    percentDifference: percentDiff
+                }
+            });
+            riskScore += 30;
+            console.log(`\n⚠️  SALARY VERIFICATION FAILED:`);
+            console.log(`   User Entered: ₹${enteredSalary}`);
+            console.log(`   Salary Slip: ₹${extractedSalary}`);
+            console.log(`   Difference: ${percentDiff.toFixed(1)}% (threshold: 20%)`);
+        } else {
+            console.log(`\n✅ SALARY VERIFICATION PASSED:`);
+            console.log(`   User Entered: ₹${enteredSalary}`);
+            console.log(`   Salary Slip: ₹${extractedSalary}`);
+            console.log(`   Difference: ${percentDiff.toFixed(1)}% (within 20% threshold)`);
         }
     }
 
@@ -357,6 +500,7 @@ function performFraudCheck(documents) {
         passed: riskScore < 30,
         riskScore: Math.min(100, riskScore),
         riskLevel: riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low',
+        flagged: riskScore >= 30,
         issues
     };
 }
@@ -365,6 +509,7 @@ function performFraudCheck(documents) {
 
 module.exports = {
     ocrImage,
+    performOCR,
     parseAadhaar,
     parsePAN,
     parseBankStatement,
