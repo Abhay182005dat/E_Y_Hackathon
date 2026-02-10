@@ -11,6 +11,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@langchain/core": "^1.1.20",
+    "@langchain/langgraph": "^1.1.4",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "connect-mongo": "^5.1.0",

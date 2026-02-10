@@ -69,11 +69,11 @@ Keep it realistic: customers may negotiate slightly; reject if terms feel unsuit
         sessionId,
         offer: negotiatedOffer
     };
-    
+
     const cid = await uploadJsonToPinata(interaction);
     appendToLedger('interaction_ledger', { ...interaction, cid });
 
-    if(negotiatedOffer.userResponse === 'accepted'){
+    if (negotiatedOffer.userResponse === 'accepted') {
         const offerForLedger = { sessionId, offer: negotiatedOffer, status: 'locked' };
         const offerCid = await uploadJsonToPinata(offerForLedger);
         appendToLedger('loan_offer_ledger', { ...offerForLedger, cid: offerCid });
@@ -81,7 +81,43 @@ Keep it realistic: customers may negotiate slightly; reject if terms feel unsuit
     return negotiatedOffer;
 }
 
-module.exports = { 
+/**
+ * LLM-powered routing decision for dynamic agent orchestration.
+ * The graph can call this when it needs intelligent routing beyond simple conditionals.
+ *
+ * @param {Object} state - Current graph state
+ * @returns {string} Name of the next agent node to call
+ */
+async function routeDecision(state) {
+    const prompt = `You are an intelligent loan-processing orchestrator. Given the current state of a loan application, decide the next step.
+
+Current state:
+- Intent: ${state.intent || 'unknown'}
+- KYC Status: ${state.kycStatus || 'pending'}
+- Credit Risk Acceptable: ${state.riskAcceptable || 'unknown'}
+- Eligibility: ${state.eligibility || 'unknown'}
+- Offer Status: ${state.negotiatedOffer ? state.negotiatedOffer.userResponse : 'pending'}
+- Approval: ${state.approvalStatus || 'pending'}
+- Has Loan ID: ${state.loanId ? 'yes' : 'no'}
+
+Available next steps: dataCollection, kycVerification, creditAnalysis, underwriting, offerNegotiation, approval, documentGeneration, disbursement, monitoring, done
+
+Respond with ONLY ONE WORD — the next step name. If everything is complete, respond "done".`;
+
+    try {
+        const result = await callGemini(prompt);
+        const decision = result.trim().toLowerCase().replace(/[^a-z]/g, '');
+        const validSteps = ['datacollection', 'kycverification', 'creditanalysis', 'underwriting',
+            'offernegotiation', 'approval', 'documentgeneration', 'disbursement', 'monitoring', 'done'];
+        return validSteps.includes(decision) ? decision : 'done';
+    } catch (error) {
+        console.error('Route decision failed:', error.message);
+        return 'done';
+    }
+}
+
+module.exports = {
     detectLoanIntent,
-    presentAndNegotiateOffer
+    presentAndNegotiateOffer,
+    routeDecision
 };

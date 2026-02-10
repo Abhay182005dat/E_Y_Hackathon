@@ -44,7 +44,7 @@ const {
     getActiveSessionCount
 } = require('./server/utils/redisClient');
 
-// Agents
+// Agents (kept for direct use in /payment endpoint)
 const { detectLoanIntent, presentAndNegotiateOffer } = require('./agents/masterAgent');
 const { collectUserData } = require('./agents/dataAgent');
 const { verifyKYC } = require('./agents/verificationAgent');
@@ -54,6 +54,13 @@ const { executeApproval } = require('./agents/approvalAgent');
 const { generateSanctionLetter } = require('./agents/documentAgent');
 const { disburseFunds } = require('./agents/disbursementAgent');
 const { logEmiPayment } = require('./agents/monitoringAgent');
+const { handleNegotiation } = require('./agents/negotiationAgent');
+const { detectIntent } = require('./agents/intentDetectionAgent');
+const { handleAcceptance } = require('./agents/acceptanceAgent');
+
+// LangGraph Orchestration & Conversational AI
+const { runLoanGraph } = require('./orchestration/agentGraph');
+const { generateChatResponse, generateOffTopicResponse } = require('./conversational/responseGenerator');
 
 // Utils
 const { parseAadhaar, parsePAN, parseBankStatement, parseSalarySlip, performFraudCheck } = require('./utils/ocr');
@@ -262,99 +269,49 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 
 // The entire loan application flow
 app.post('/loan', async (req, res) => {
-    const cids = [];
     try {
-        // PHASE 1: Customer Entry & Intent Detection
         const { message, userData } = req.body;
         const userId = userData.phone || userData.accountNumber || userData.userId || 'unknown';
-        const { intent, sessionId } = await detectLoanIntent(message);
-        // CIDs from this phase are logged internally by the agent
 
-        if (intent !== 'loanApplication') {
-            return res.status(400).json({ status: 'rejected', reason: 'Invalid intent' });
+        // ─── Run LangGraph orchestration ───
+        const finalState = await runLoanGraph({ message, userData });
+
+        // Check if the graph ended with a rejection
+        if (finalState.status === 'rejected' || !finalState.loanId) {
+            return res.status(200).json({
+                status: 'rejected',
+                reason: finalState.rejectionReason || finalState.error || 'Application not approved',
+                cids: finalState.cids || []
+            });
         }
 
-        // PHASE 2: Data Collection & Consent
-        const { consentCid, interactionCid } = await collectUserData(sessionId, userData);
-        cids.push({ step: 'consent', cid: consentCid }, { step: 'dataCollection', cid: interactionCid });
-
-        // PHASE 3: KYC & Identity Verification
-        const { kycStatus, reason: kycReason } = await verifyKYC(sessionId, userData.kycDocuments, userId);
-        if (kycStatus !== 'verified') {
-            return res.status(200).json({ status: 'rejected', reason: kycReason || 'KYC failed', cids });
-        }
-
-        // PHASE 4: Credit Score & Financial Risk Analysis
-        const creditCheck = await analyzeCredit(sessionId, userData, userId);
-        cids.push({ step: 'creditAnalysis', cid: creditCheck.creditData.cid });
-        if (!creditCheck.riskAcceptable) {
-            return res.status(200).json({ status: 'rejected', reason: creditCheck.reason || 'Credit risk not acceptable', cids });
-        }
-
-        // PHASE 4 (cont.): Underwriting
-        const underwriting = await evaluateRiskAndPrice(sessionId, userData, creditCheck.creditData);
-        cids.push({ step: 'underwriting', cid: underwriting.cid });
-        if (!underwriting.eligibility) {
-            return res.status(200).json({ status: 'rejected', reason: underwriting.reason, cids });
-        }
-
-        // PHASE 5: Loan Offer Generation & Negotiation
-        const finalOffer = await presentAndNegotiateOffer(sessionId, underwriting.offer);
-        // CIDs logged internally
-        if (finalOffer.userResponse !== 'accepted') {
-            return res.status(200).json({ status: 'rejected', reason: 'User rejected the offer', cids });
-        }
-
-        // PHASE 6: Loan Approval
-        const approvalDetails = await executeApproval(sessionId, kycStatus, creditCheck, finalOffer);
-        cids.push({ step: 'approval', cid: approvalDetails.approvalCid });
-        if (approvalDetails.approvalStatus !== 'approved') {
-            return res.status(200).json({ status: 'rejected', reason: approvalDetails.reason, cids });
-        }
-
-        // PHASE 7: Sanction Letter Generation
-        const { loanId, sanctionCid } = await generateSanctionLetter(sessionId, approvalDetails, finalOffer);
-        cids.push({ step: 'sanction', cid: sanctionCid });
-
-        // Log application to blockchain (immutable record)
+        // ─── Post-graph: Blockchain master contract (unchanged) ───
         if (blockchainInitialized) {
             try {
                 await logApplicationToBlockchain({
-                    applicationId: loanId,
+                    applicationId: finalState.loanId,
                     userId: userId,
                     customerName: userData.name || 'Customer',
-                    loanAmount: finalOffer.loanAmount,
-                    interestRate: finalOffer.interestRate,
-                    approvalScore: creditCheck.creditData.cibilScore,
+                    loanAmount: finalState.negotiatedOffer?.loanAmount || userData.loanAmount,
+                    interestRate: finalState.negotiatedOffer?.interestRate,
+                    approvalScore: finalState.creditData?.cibilScore,
                     status: 'accepted',
-                    documentHash: sanctionCid
+                    documentHash: finalState.sanctionCid
                 });
 
-                // Log chat interaction
                 await logChatToBlockchain({
-                    sessionId,
+                    sessionId: finalState.sessionId,
                     userId,
-                    message: 'Loan accepted',
+                    message: 'Loan accepted via LangGraph',
                     state: 'accepted',
                     negotiationCount: 0,
-                    finalRate: finalOffer.interestRate
+                    finalRate: finalState.negotiatedOffer?.interestRate
                 });
             } catch (error) {
                 console.error('Blockchain logging error:', error.message);
-                // Continue even if blockchain logging fails
             }
-        }
 
-        // PHASE 8: Disbursement
-        const { disbursementCid } = await disburseFunds(sessionId, loanId, { ...finalOffer, userId }, userId);
-        cids.push({ step: 'disbursement', cid: disbursementCid });
-
-        // PHASE 9: Log first (mock) EMI payment for monitoring startup
-        const { paymentCid } = await logEmiPayment(loanId, { amount: 0, paymentDate: new Date().toISOString(), emiNumber: 1 }, userId);
-        cids.push({ step: 'monitoring', cid: paymentCid });
-
-        // Generate master contract after all blockchain transactions
-        if (blockchainInitialized) {
+            // Generate master contract after blockchain confirmations
             setTimeout(async () => {
                 try {
                     console.log(`📄 Generating master contract for ${userId}...`);
@@ -366,18 +323,18 @@ app.post('/loan', async (req, res) => {
                 } catch (error) {
                     console.error('Master contract generation error:', error.message);
                 }
-            }, 3000); // Wait 3 seconds for blockchain confirmations
+            }, 3000);
         }
 
         res.status(200).json({
             status: 'approved',
-            loanId,
-            cids
+            loanId: finalState.loanId,
+            cids: finalState.cids || []
         });
 
     } catch (error) {
-        console.error("Loan processing failed:", error);
-        res.status(500).json({ status: 'error', message: error.message, cids });
+        console.error('Loan processing failed:', error);
+        res.status(500).json({ status: 'error', message: error.message, cids: [] });
     }
 });
 
@@ -745,8 +702,8 @@ app.post('/api/chat', async (req, res) => {
             ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)); // Allow plain numbers in active session
 
         if (!isLoanRelated) {
-            // Reject off-topic queries
-            const response = "I'm here to help with loan applications only! 😊\n\nI can assist you with:\n💰 Loan eligibility & applications\n📊 Interest rates & offers\n💵 EMI calculations\n📝 Document verification\n\nPlease ask about loans, or say 'accept' to proceed with your current offer.";
+            // Reject off-topic queries with LLM-generated polite redirect
+            const response = await generateOffTopicResponse(message, name);
 
             if (redisInitialized) {
                 await addChatMessage(sid, { role: 'bot', content: response });
@@ -757,188 +714,205 @@ app.post('/api/chat', async (req, res) => {
             return res.json({ ok: true, response, sessionId: sid, state: session.state, warning: 'off_topic' });
         }
 
-        // State machine logic - produces consistent responses
+        // ─── AGENTIC INTENT-BASED ROUTING ───
+        // Use LLM to detect intent instead of hardcoded keyword matching
         let response;
+        let actionTaken = '';
+        let updatedLoanAmount = null;
+
+        // Get conversation history from Redis for context
+        let conversationHistory = [];
+        if (redisInitialized) {
+            try {
+                conversationHistory = await getChatHistory(sid, 6);
+            } catch (e) { /* ignore */ }
+        }
+
+        // Always use intent detection (Agentic approach)
+        let detectedIntent = null;
+        try {
+            console.log(`[Chat] Detecting intent for: "${message.substring(0, 100)}"`);
+            detectedIntent = await detectIntent(message, session.state, name);
+            console.log(`[Chat] Detected intent: ${detectedIntent.intent} (confidence: ${detectedIntent.confidence})`);
+        } catch (error) {
+            console.error('[Chat] Intent detection failed:', error.message);
+            // Fallback: continue with safe default
+            detectedIntent = { intent: 'unknown', confidence: 'low', contextFlags: { isOffTopic: false } };
+        }
+
+        // Route based on detected intent
+        const intent = detectedIntent.intent;
+        const flags = detectedIntent.contextFlags || {};
 
         if (session.state === 'accepted') {
-            response = `Your loan application is already submitted! 🎉\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n📋 Status: Under Review\n\nPlease wait for admin approval.`;
-        } else if (lower.includes('yes') || lower.includes('accept') || lower.includes('proceed') || lower.includes('go ahead') || lower.includes('ok')) {
-            if (session.state === 'negotiating' || session.state === 'offered') {
-                session.state = 'accepted';
-                session.finalRate = session.finalRate || currentRate;
-                session.finalAmount = finalAmount;
+            // Already accepted — inform the user
+            actionTaken = `The customer's loan application has already been submitted. Reference ID: LOAN-${sid.slice(-8)}. Status: Under Review. Tell them to wait for admin approval.`;
+        } else if (intent === 'negotiate_rate' || flags.isNegotiation) {
+            // ⚠️ USE INTELLIGENT NEGOTIATION AGENT - GenAI-driven
+            console.log(`[Chat] Processing negotiation request...`);
+            const negotiationResult = await handleNegotiation(sid, {
+                customerName: name,
+                creditScore: score,
+                requestedAmount,
+                preApprovedLimit,
+                baseRate,
+                adjustedRate,
+                currentRate: parseFloat(session.finalRate || adjustedRate),
+                negotiationCount: session.negotiationCount || 0,
+                negotiationHistory: session.negotiationHistory || [],
+                userRequest: message
+            });
 
-                const statusMessage = requestedAmount <= preApprovedLimit
-                    ? '✅ Approved'
-                    : `⚠️ Adjusted to maximum limit`;
-
-                response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n💵 Approved Amount: ₹${finalAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Final Interest Rate: ${session.finalRate}%\n📋 Status: ${statusMessage}\n\n${requestedAmount < preApprovedLimit ? '🎉 Great choice! You got a better rate for borrowing less!' : ''}\n\nYou'll receive SMS confirmation shortly.`;
+            if (!negotiationResult.success) {
+                actionTaken = `Negotiation request processed. ${negotiationResult.reasoning}`;
             } else {
-                session.state = 'offered';
-                response = `Hello ${name}! 👋\n\n📊 Credit Score: ${score}\n💰 Pre-Approved: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${currentRate}%\n\nWould you like to accept this offer or negotiate?`;
+                const recommendation = negotiationResult.recommendation;
+                
+                if (recommendation === 'final_offer' || recommendation === 'decline') {
+                    session.state = 'finalOffer';
+                    if (!session.negotiationHistory) session.negotiationHistory = [];
+                    actionTaken = `FINAL OFFER ONLY - DO NOT SAY APPROVED. The bot has calculated a final negotiated rate and is presenting it. Next action: Customer must explicitly say YES to accept. Current offer details: New Interest Rate: ${negotiationResult.newRate}%. Agent reasoning: ${negotiationResult.reasoning}. Offer message to communicate: ${negotiationResult.message}`;
+                } else if (recommendation === 'reduce') {
+                    session.state = 'negotiating';
+                    session.negotiationCount = (session.negotiationCount || 0) + 1;
+                    const oldRate = session.finalRate || adjustedRate;
+                    session.finalRate = negotiationResult.newRate.toFixed(2);
+                    if (!session.negotiationHistory) session.negotiationHistory = [];
+                    session.negotiationHistory.push({
+                        fromRate: parseFloat(oldRate),
+                        toRate: negotiationResult.newRate,
+                        reason: negotiationResult.reasoning
+                    });
+                    actionTaken = `RATE REDUCTION OFFER - AWAITING CONFIRMATION. The interest rate has been reduced. Current state: ${session.state}. Do NOT say the application is approved. Tell the customer the new offer: Interest Rate: ${negotiationResult.newRate}% (reduced from ${oldRate}%). Then ask them to confirm: 'Would you like to accept this offer?' Agent reasoning: ${negotiationResult.reasoning}. Offer details: ${negotiationResult.message}`;
+                } else {
+                    actionTaken = `Negotiation processing result: ${negotiationResult.reasoning}. Offer to present: ${negotiationResult.message}`;
+                }
             }
-        } else if (lower.includes('negotiate') || lower.includes('reduce') || lower.includes('lower') || lower.includes('rate') || lower.includes('less')) {
-            if (session.negotiationCount >= 2) {
-                response = `I've already offered the best rate I can, ${name}.\n\n📉 Final Rate: ${session.finalRate || (adjustedRate - 0.5)}%\n\nThis is our lowest possible rate. Would you like to accept?`;
-            } else {
-                session.state = 'negotiating';
-                session.negotiationCount++;
-                const reduction = 0.25 * session.negotiationCount;
-                session.finalRate = (adjustedRate - reduction).toFixed(1);
-                response = `I can offer a ${reduction}% reduction, ${name}!\n\n📉 New Rate: ${session.finalRate}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n\n${requestedAmount < preApprovedLimit ? '✨ You already have a better rate for borrowing less!' : ''}\n\nWould you like to accept this offer?`;
+        } else if (intent === 'accept_offer' || flags.isConfirmation) {
+            // ⚠️ USE INTELLIGENT ACCEPTANCE AGENT - GenAI-driven validation
+            console.log(`[Chat] Processing acceptance...`);
+            try {
+                const acceptanceResult = await handleAcceptance(sid, {
+                    customerName: name,
+                    sessionState: session.state,
+                    currentRate: parseFloat(session.finalRate || adjustedRate),
+                    requestedAmount,
+                    approvedAmount: finalAmount,
+                    preApprovedLimit,
+                    creditScore: score,
+                    negotiationHistory: session.negotiationHistory || []
+                });
+
+                if (acceptanceResult.isValidAcceptance) {
+                    console.log(`[Chat] ✅ Acceptance validated by agent`);
+                    session.state = 'accepted';
+                    session.finalRate = session.finalRate || currentRate;
+                    session.finalAmount = finalAmount;
+                    actionTaken = `The customer ACCEPTED the loan offer. Reference ID: LOAN-${sid.slice(-8)}. Applied Amount: ₹${requestedAmount.toLocaleString()}. Approved Amount: ₹${finalAmount.toLocaleString()}. Max Limit: ₹${preApprovedLimit.toLocaleString()}. Final Interest Rate: ${session.finalRate}%. Congratulate them warmly and summarize the approved details. Include reference ID and tell them they'll receive confirmation shortly.`;
+                } else {
+                    console.log(`[Chat] ⚠️ Acceptance not validated: ${acceptanceResult.reasoning}`);
+                    actionTaken = acceptanceResult.message || `Thank you for your interest. Could you please clarify your confirmation?`;
+                }
+            } catch (error) {
+                console.error('[Chat] Acceptance agent error:', error.message);
+                // Fallback to strict validation
+                if ((session.state === 'negotiating' || session.state === 'offered' || session.state === 'finalOffer') 
+                    && (lower.includes('yes') || lower.includes('accept') || lower.includes('proceed') || lower.includes('go ahead'))) {
+                    session.state = 'accepted';
+                    session.finalRate = session.finalRate || currentRate;
+                    session.finalAmount = finalAmount;
+                    actionTaken = `The customer ACCEPTED the loan offer. Reference ID: LOAN-${sid.slice(-8)}. Applied Amount: ₹${requestedAmount.toLocaleString()}. Approved Amount: ₹${finalAmount.toLocaleString()}. Max Limit: ₹${preApprovedLimit.toLocaleString()}. Final Interest Rate: ${session.finalRate}%. Congratulate them warmly and summarize the approved details. Include reference ID and tell them they'll receive confirmation shortly.`;
+                } else {
+                    actionTaken = `Thank you for your response. Could you please confirm: Do you accept the loan offer at ${session.finalRate || adjustedRate}% interest for ₹${finalAmount.toLocaleString()}?`;
+                }
             }
-        } else if (session.state === 'intro' || lower.includes('loan') || lower.includes('apply') || lower.includes('need') || lower.includes('hi') || lower.includes('hello')) {
-            session.state = 'offered';
-
-            const rateBonus = requestedAmount < preApprovedLimit
-                ? `\n🎁 Special Offer: ${(baseRate - adjustedRate).toFixed(1)}% lower rate for borrowing ₹${requestedAmount.toLocaleString()} (${loanUtilization.toFixed(0)}% of your limit)!`
-                : '';
-
-            response = `Hello ${name}! 👋 Based on your verified documents:\n\n📊 Approval Score: ${score / 10}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${adjustedRate.toFixed(1)}% ${rateBonus}\n💵 Monthly Salary: ₹${salary.toLocaleString()}\n\n${requestedAmount <= preApprovedLimit ? '✅ Great news! Your requested amount is within your limit!' : '⚠️ Note: Your request exceeds the limit, we can approve up to ₹' + preApprovedLimit.toLocaleString()}\n\nWould you like to accept this offer or negotiate the interest rate?`;
-        } else if (lower.includes('change') && (lower.includes('amount') || lower.includes('loan'))) {
-            // Detect loan amount change request
-            // Use a single regex that captures the number AND any unit suffix immediately after it.
-            // This prevents matching 'l' from words like "applied" or "loan" in the message.
-            // Supports: "2 lakh", "200000", "2,00,000", "200k", "2L", "2 lac", "2.5 lakh"
+        } else if (intent === 'change_amount' || flags.isAmountChange) {
+            // ⚠️ Amount change - parse with intelligent extraction
+            console.log(`[Chat] Processing amount change request...`);
             const amountMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|thousand|lakhs|lacs)?\b/i);
             let newAmount = null;
-
             if (amountMatch) {
                 let extractedNum = parseFloat(amountMatch[1].replace(/,/g, ''));
                 const unitStr = (amountMatch[2] || '').toLowerCase();
-
                 if (unitStr) {
-                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
-                        extractedNum *= 100000;
-                    } else if (unitStr.includes('thousand')) {
-                        extractedNum *= 1000;
-                    }
+                    if (unitStr.includes('lakh') || unitStr.includes('lac')) extractedNum *= 100000;
+                    else if (unitStr.includes('thousand')) extractedNum *= 1000;
                 }
-
-                // Also check for standalone suffix like "2L" or "200k" (letter immediately after number)
                 const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
                 if (shortUnitMatch && !unitStr) {
                     extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
                     const shortUnit = shortUnitMatch[2].toLowerCase();
-                    if (shortUnit === 'l') {
-                        extractedNum *= 100000;
-                    } else if (shortUnit === 'k') {
-                        extractedNum *= 1000;
-                    }
+                    if (shortUnit === 'l') extractedNum *= 100000;
+                    else if (shortUnit === 'k') extractedNum *= 1000;
                 }
-
                 newAmount = Math.round(extractedNum);
             }
-
-            if (newAmount && newAmount > 0) {
-                if (newAmount <= preApprovedLimit) {
-                    // Calculate new rate based on utilization
-                    const newUtilization = (newAmount / preApprovedLimit) * 100;
-                    let newRate = baseRate;
-                    if (newUtilization <= 50) {
-                        newRate = baseRate - 2;
-                    } else if (newUtilization <= 75) {
-                        newRate = baseRate - 1;
-                    }
-
-                    session.finalRate = newRate;
-                    response = `✅ Loan amount updated to ₹${newAmount.toLocaleString()}!\n\n📊 New Details:\n💰 Loan Amount: ₹${newAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${newRate.toFixed(1)}%\n📉 Utilization: ${newUtilization.toFixed(0)}%\n\n${newUtilization <= 50 ? '🎉 Great! You get a 2% discount for using ≤50% of your limit!' : newUtilization <= 75 ? '✨ Nice! You get a 1% discount for using ≤75% of your limit!' : ''}\n\nWould you like to accept this offer?`;
-
-                    // Save updated amount to session
-                    session.updatedLoanAmount = newAmount;
-
-                    // Return updated amount to frontend
-                    if (redisInitialized) {
-                        await setChatSession(sid, session, 86400);
-                        await addChatMessage(sid, { role: 'bot', content: response });
-                        await publishChatEvent(sid, 'bot_response', { response, state: session.state, updatedLoanAmount: newAmount });
-                    }
-
-                    return res.json({
-                        ok: true,
-                        response,
-                        sessionId: sid,
-                        state: session.state,
-                        updatedLoanAmount: newAmount
-                    });
-                } else {
-                    response = `⚠️ Sorry ${name}, ₹${newAmount.toLocaleString()} exceeds your pre-approved limit.\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n\nPlease choose an amount up to ₹${preApprovedLimit.toLocaleString()}.`;
-                }
+            if (newAmount && newAmount > 0 && newAmount <= preApprovedLimit) {
+                const newUtilization = (newAmount / preApprovedLimit) * 100;
+                let newRate = baseRate;
+                if (newUtilization <= 50) newRate = baseRate - 2;
+                else if (newUtilization <= 75) newRate = baseRate - 1;
+                session.finalRate = newRate;
+                session.updatedLoanAmount = newAmount;
+                updatedLoanAmount = newAmount;
+                actionTaken = `Customer changed loan amount to ₹${newAmount.toLocaleString()}. New rate: ${newRate.toFixed(1)}%. Utilization: ${newUtilization.toFixed(0)}%. Max limit: ₹${preApprovedLimit.toLocaleString()}. Confirm the update and present the revised offer.`;
+            } else if (newAmount && newAmount > preApprovedLimit) {
+                actionTaken = `Customer requested ₹${newAmount.toLocaleString()} which EXCEEDS the pre-approved limit of ₹${preApprovedLimit.toLocaleString()}. Politely inform them and ask for a lower amount.`;
             } else {
-                response = `I'd be happy to help you change the loan amount! Please specify the new amount.\n\nFor example:\n• "Change amount to 3 lakh"\n• "Change loan to 250000"\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}`;
+                actionTaken = `Customer wants to change the loan amount but didn't specify a valid number. Ask them to provide the new amount. Their max limit is ₹${preApprovedLimit.toLocaleString()}.`;
             }
-        } else if ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)) {
-            // Plain number input during active session - treat as amount change
-            const numMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|lakhs|lacs|thousand)?\b/i);
-            let newAmount = null;
-
-            if (numMatch) {
-                let extractedNum = parseFloat(numMatch[1].replace(/,/g, ''));
-                const unitStr = (numMatch[2] || '').toLowerCase();
-
-                if (unitStr) {
-                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
-                        extractedNum *= 100000;
-                    } else if (unitStr.includes('thousand')) {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                // Check for standalone suffix like "2L" or "200k"
-                const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
-                if (shortUnitMatch && !unitStr) {
-                    extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
-                    const shortUnit = shortUnitMatch[2].toLowerCase();
-                    if (shortUnit === 'l') {
-                        extractedNum *= 100000;
-                    } else if (shortUnit === 'k') {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                newAmount = Math.round(extractedNum);
+        } else if (intent === 'off_topic' || flags.isOffTopic) {
+            // Off-topic query - reject politely
+            console.log(`[Chat] Off-topic detected by intent classification`);
+            response = await generateOffTopicResponse(message, name);
+            if (redisInitialized) {
+                await addChatMessage(sid, { role: 'bot', content: response });
+                await publishChatEvent(sid, 'bot_response', { response, state: 'off_topic' });
             }
-
-            if (newAmount && newAmount > 0) {
-                if (newAmount <= preApprovedLimit) {
-                    const newUtilization = (newAmount / preApprovedLimit) * 100;
-                    let newRate = baseRate;
-                    if (newUtilization <= 50) {
-                        newRate = baseRate - 2;
-                    } else if (newUtilization <= 75) {
-                        newRate = baseRate - 1;
-                    }
-
-                    session.finalRate = newRate;
-                    response = `✅ Loan amount updated to ₹${newAmount.toLocaleString()}!\n\n📊 New Details:\n💰 Loan Amount: ₹${newAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${newRate.toFixed(1)}%\n📉 Utilization: ${newUtilization.toFixed(0)}%\n\n${newUtilization <= 50 ? '🎉 Great! You get a 2% discount for using ≤50% of your limit!' : newUtilization <= 75 ? '✨ Nice! You get a 1% discount for using ≤75% of your limit!' : ''}\n\nWould you like to accept this offer?`;
-
-                    session.updatedLoanAmount = newAmount;
-
-                    if (redisInitialized) {
-                        await setChatSession(sid, session, 86400);
-                        await addChatMessage(sid, { role: 'bot', content: response });
-                        await publishChatEvent(sid, 'bot_response', { response, state: session.state, updatedLoanAmount: newAmount });
-                    }
-
-                    return res.json({
-                        ok: true,
-                        response,
-                        sessionId: sid,
-                        state: session.state,
-                        updatedLoanAmount: newAmount
-                    });
-                } else {
-                    response = `⚠️ Sorry ${name}, ₹${newAmount.toLocaleString()} exceeds your pre-approved limit.\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n\nPlease choose an amount up to ₹${preApprovedLimit.toLocaleString()}.`;
-                }
-            } else {
-                response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
-            }
+            return res.json({ ok: true, response, sessionId: sid, state: session.state, warning: 'off_topic' });
+        } else if (intent === 'query_terms' || intent === 'clarification') {
+            // Customer asking questions - let LLM answer
+            console.log(`[Chat] Customer query/clarification detected`);
+            actionTaken = `Customer is asking about loan terms or clarifying details. Answer their question clearly based on current offer: Rate ${session.finalRate || adjustedRate}%, Amount ₹${finalAmount.toLocaleString()}, Limit ₹${preApprovedLimit.toLocaleString()}.`;
         } else {
-            response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
+            // Unknown or greeting intent
+            console.log(`[Chat] Default/greeting intent: ${intent}`);
+            if (session.state === 'offered' || session.state === 'negotiating') {
+                actionTaken = `Customer message doesn't fit standard patterns. Current state: ${session.state}. Remind them of the current offer: Interest Rate ${session.finalRate || adjustedRate}%, Amount ₹${finalAmount.toLocaleString()}. Ask if they want to accept or negotiate further.`;
+            } else {
+                actionTaken = `The customer just arrived or said a greeting. Present their loan offer: Credit Score ${score}, Pre-Approved Limit ₹${preApprovedLimit.toLocaleString()}, Interest Rate ${currentRate}%. Ask if they want to accept or negotiate.`;
+            }
+        }
+
+        // Generate natural LLM response based on the action taken
+        response = await generateChatResponse({
+            userMessage: message,
+            customerData: { name, monthlySalary: salary, loanAmount: requestedAmount, ...customerData },
+            creditScore: { score, preApprovedLimit: { limit: preApprovedLimit, interestRate: baseRate } },
+            sessionState: session,
+            conversationHistory,
+            actionTaken,
+        });
+
+        // ⚠️ CRITICAL: Save session state to Redis immediately after any state change
+        // This ensures the negotiation/offer state is persisted for the next message
+        if (redisInitialized) {
+            await setChatSession(sid, session, 86400);
+            await addChatMessage(sid, { role: 'bot', content: response });
+            await publishChatEvent(sid, 'bot_response', { response, state: session.state });
+        }
+
+        // If we have an updated loan amount, return it to the frontend
+        if (updatedLoanAmount) {
+            return res.json({ ok: true, response, sessionId: sid, state: session.state, updatedLoanAmount });
         }
 
         // If accepted, store the application with EMI schedule
+        // ⚠️ CRITICAL: Only proceed if state is explicitly 'accepted' - NOT 'negotiating' or 'offered'
+        console.log(`[Chat] State check before storing: state='${session.state}', applicationStored=${session.applicationStored}`);
+        
         if (session.state === 'accepted' && !session.applicationStored) {
+            console.log(`[Chat] ✅ STORING APPLICATION - Customer has explicitly accepted at rate ${session.finalRate}%`);
             const finalRate = parseFloat(session.finalRate || adjustedRate);
             const approvedAmount = session.finalAmount || finalAmount;
             const emiData = generateEMISchedule(approvedAmount, finalRate, 36);

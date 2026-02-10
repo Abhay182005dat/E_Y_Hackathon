@@ -1,4 +1,4 @@
-// File: C:\Users\HP\OneDrive\Desktop\ey-techathonzip (1)\ey-techathon\frontend\app\layout.jsx
+// File: D:\Game\hackathon\E_Y_Hackathon\frontend\app\layout.jsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
