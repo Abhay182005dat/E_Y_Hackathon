@@ -1,8 +1,8 @@
-// File: C:\Users\HP\OneDrive\Desktop\ey-techathonzip (1)\ey-techathon\frontend\app\admin\page.jsx
-import * as entry from '../../../../app/admin/page.js'
+// File: C:\Users\HP\OneDrive\Desktop\ey-techathonzip (1)\ey-techathon\frontend\app\dashboard\page.jsx
+import * as entry from '../../../../app/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../app/admin/page.js')
+type TEntry = typeof import('../../../../app/dashboard/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

@@ -741,7 +741,8 @@ app.post('/api/chat', async (req, res) => {
         const loanKeywords = ['loan', 'borrow', 'credit', 'emi', 'interest', 'rate', 'money', 'finance', 'apply', 'approve', 'amount', 'eligible', 'tenure', 'payment', 'negotiate', 'accept', 'reject', 'disbursement', 'sanction', 'principal', 'repayment', 'advance', 'funding', 'capital', 'installment', 'debt', 'mortgage', 'collateral', 'limit', 'balance', 'due', 'overdue', 'refinance', 'prepayment', 'foreclosure', 'processing fee', 'documentation', 'salary', 'income', 'kyc', 'verification', 'document', 'approval', 'status', 'application', 'yes', 'no', 'ok', 'proceed'];
         const lower = message.toLowerCase().trim();
         const isLoanRelated = loanKeywords.some(keyword => lower.includes(keyword)) ||
-            (session.state === 'intro' && lower.length <= 10); // Only allow short greetings in intro state
+            (session.state === 'intro' && lower.length <= 10) || // Allow short greetings in intro state
+            ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)); // Allow plain numbers in active session
 
         if (!isLoanRelated) {
             // Reject off-topic queries
@@ -796,18 +797,32 @@ app.post('/api/chat', async (req, res) => {
             response = `Hello ${name}! 👋 Based on your verified documents:\n\n📊 Approval Score: ${score / 10}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${adjustedRate.toFixed(1)}% ${rateBonus}\n💵 Monthly Salary: ₹${salary.toLocaleString()}\n\n${requestedAmount <= preApprovedLimit ? '✅ Great news! Your requested amount is within your limit!' : '⚠️ Note: Your request exceeds the limit, we can approve up to ₹' + preApprovedLimit.toLocaleString()}\n\nWould you like to accept this offer or negotiate the interest rate?`;
         } else if (lower.includes('change') && (lower.includes('amount') || lower.includes('loan'))) {
             // Detect loan amount change request
-            const amountMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:lakh|lac|l|k|thousand)?/i);
+            // Use a single regex that captures the number AND any unit suffix immediately after it.
+            // This prevents matching 'l' from words like "applied" or "loan" in the message.
+            // Supports: "2 lakh", "200000", "2,00,000", "200k", "2L", "2 lac", "2.5 lakh"
+            const amountMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|thousand|lakhs|lacs)?\b/i);
             let newAmount = null;
 
             if (amountMatch) {
                 let extractedNum = parseFloat(amountMatch[1].replace(/,/g, ''));
-                const unit = message.match(/lakh|lac|l|k|thousand/i);
+                const unitStr = (amountMatch[2] || '').toLowerCase();
 
-                if (unit) {
-                    const unitStr = unit[0].toLowerCase();
-                    if (unitStr.includes('lakh') || unitStr.includes('lac') || unitStr === 'l') {
+                if (unitStr) {
+                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
                         extractedNum *= 100000;
-                    } else if (unitStr === 'k' || unitStr.includes('thousand')) {
+                    } else if (unitStr.includes('thousand')) {
+                        extractedNum *= 1000;
+                    }
+                }
+
+                // Also check for standalone suffix like "2L" or "200k" (letter immediately after number)
+                const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
+                if (shortUnitMatch && !unitStr) {
+                    extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
+                    const shortUnit = shortUnitMatch[2].toLowerCase();
+                    if (shortUnit === 'l') {
+                        extractedNum *= 100000;
+                    } else if (shortUnit === 'k') {
                         extractedNum *= 1000;
                     }
                 }
@@ -851,6 +866,72 @@ app.post('/api/chat', async (req, res) => {
                 }
             } else {
                 response = `I'd be happy to help you change the loan amount! Please specify the new amount.\n\nFor example:\n• "Change amount to 3 lakh"\n• "Change loan to 250000"\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}`;
+            }
+        } else if ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)) {
+            // Plain number input during active session - treat as amount change
+            const numMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|lakhs|lacs|thousand)?\b/i);
+            let newAmount = null;
+
+            if (numMatch) {
+                let extractedNum = parseFloat(numMatch[1].replace(/,/g, ''));
+                const unitStr = (numMatch[2] || '').toLowerCase();
+
+                if (unitStr) {
+                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
+                        extractedNum *= 100000;
+                    } else if (unitStr.includes('thousand')) {
+                        extractedNum *= 1000;
+                    }
+                }
+
+                // Check for standalone suffix like "2L" or "200k"
+                const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
+                if (shortUnitMatch && !unitStr) {
+                    extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
+                    const shortUnit = shortUnitMatch[2].toLowerCase();
+                    if (shortUnit === 'l') {
+                        extractedNum *= 100000;
+                    } else if (shortUnit === 'k') {
+                        extractedNum *= 1000;
+                    }
+                }
+
+                newAmount = Math.round(extractedNum);
+            }
+
+            if (newAmount && newAmount > 0) {
+                if (newAmount <= preApprovedLimit) {
+                    const newUtilization = (newAmount / preApprovedLimit) * 100;
+                    let newRate = baseRate;
+                    if (newUtilization <= 50) {
+                        newRate = baseRate - 2;
+                    } else if (newUtilization <= 75) {
+                        newRate = baseRate - 1;
+                    }
+
+                    session.finalRate = newRate;
+                    response = `✅ Loan amount updated to ₹${newAmount.toLocaleString()}!\n\n📊 New Details:\n💰 Loan Amount: ₹${newAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${newRate.toFixed(1)}%\n📉 Utilization: ${newUtilization.toFixed(0)}%\n\n${newUtilization <= 50 ? '🎉 Great! You get a 2% discount for using ≤50% of your limit!' : newUtilization <= 75 ? '✨ Nice! You get a 1% discount for using ≤75% of your limit!' : ''}\n\nWould you like to accept this offer?`;
+
+                    session.updatedLoanAmount = newAmount;
+
+                    if (redisInitialized) {
+                        await setChatSession(sid, session, 86400);
+                        await addChatMessage(sid, { role: 'bot', content: response });
+                        await publishChatEvent(sid, 'bot_response', { response, state: session.state, updatedLoanAmount: newAmount });
+                    }
+
+                    return res.json({
+                        ok: true,
+                        response,
+                        sessionId: sid,
+                        state: session.state,
+                        updatedLoanAmount: newAmount
+                    });
+                } else {
+                    response = `⚠️ Sorry ${name}, ₹${newAmount.toLocaleString()} exceeds your pre-approved limit.\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n\nPlease choose an amount up to ₹${preApprovedLimit.toLocaleString()}.`;
+                }
+            } else {
+                response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
             }
         } else {
             response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
