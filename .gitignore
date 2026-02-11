@@ -2,3 +2,9 @@
 node_modules/
 uploads/
 dist
+frontend/.next/
+frontend/out/
+backend/dist/
+coverage/
+.DS_Store
+*.log
