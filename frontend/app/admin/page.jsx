@@ -302,7 +302,7 @@ export default function AdminPage() {
                                                     {new Date(app.submittedAt).toLocaleString()}
                                                 </td>
                                                 <td style={{ padding: '16px', fontWeight: 'bold', color: app.approvalScore >= 700 ? '#10b981' : '#f59e0b' }}>
-                                                    Score: {app.approvalScore}/10 %
+                                                    Score: {app.approvalScore/10} %
                                                 </td>
                                                 <td style={{ padding: '16px', fontWeight: 'bold', color: '#e2e8f0' }}>
                                                     ₹{formatAmount(app.amount)}

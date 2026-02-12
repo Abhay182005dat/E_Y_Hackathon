@@ -10,6 +10,7 @@ export default function RootLayout({ children }) {
     return (
         <html lang="en">
             <body>
+                <script src="https://cdn.tailwindcss.com"></script>
                 <AuthProvider>
                     {children}
                 </AuthProvider>
