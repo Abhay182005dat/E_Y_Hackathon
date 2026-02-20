@@ -1,709 +1,141 @@
-# 🏦 BFSI Loan Platform - Complete System Guide
+# 🏦 BFSI Loan Platform - Advanced AI & Web3 Lending System
+
+Welcome to the **BFSI Loan Platform**, a complete, automated end-to-end loan application and processing system built for modern financial institutions. 
+
+This platform leverages **AI (Ollama, LangChain, Gemini)** for intelligent underwriting and negotiation, and **Web3 (Ethereum, IPFS)** for an immutable, transparent ledger of all loan records.
+
+## 🌟 Key Hackathon Features Implemented
+
+*   **Fully Automated OCR KYC**: Analyzes Aadhaar, PAN, Bank Statements, and Salary Slips instantly.
+*   **Live Identity Verification**: Real-time camera capture for instant photo matching against KYC documents.
+*   **AI-Powered Credit Assessor**: Custom algorithm weighing income stability, debt-to-income, and historical banking behavior to generate an approval score (300-900).
+*   **Hybrid AI Loan Negotiation (Ollama + LangChain)**:
+    *   **Tier 1**: RAG-based Vector Search (Cosine Similarity) for instant, personalized FAQ answers using cached embeddings.
+    *   **Tier 2**: Llama 3.1 LLM for natural, constraint-based interest rate and EMI negotiation.
+    *   **Tier 3**: Smart "Off-Topic Gate" to politely refuse non-banking queries.
+*   **Resilient Web3 Tracking**: 
+    *   Generates full master contracts on **IPFS / Pinata**.
+    *   Anchors compact references to the **Sepolia Testnet**.
+    *   Features an **Auto-Rotating RPC Pool** to seamlessly handle rate limits.
+*   **Event-Driven Architecture**: Uses MongoDB, Redis, and Background Workers (Piscina) to ensure zero-downtime, non-blocking loan disbursements.
+
+---
 
 ## 📖 Table of Contents
-1. [What is This System?](#what-is-this-system)
-2. [How Does It Work? (Simple Overview)](#how-does-it-work-simple-overview)
-3. [System Architecture](#system-architecture)
-4. [User Journey Examples](#user-journey-examples)
-5. [File Structure Explained](#file-structure-explained)
-6. [Key Features Deep Dive](#key-features-deep-dive)
-7. [How to Use This System](#how-to-use-this-system)
-8. [Technical Details](#technical-details)
+1. [How Does It Work?](#how-does-it-work)
+2. [System Architecture](#system-architecture)
+3. [Quick Start Setup](#quick-start-setup)
+4. [Using the Standalone AI Tools](#using-the-standalone-ai-tools)
+5. [Tech Stack](#tech-stack)
 
 ---
 
-## What is This System?
+## ⚙️ How Does It Work?
 
-This is a **smart loan application system** for banks and financial institutions. Think of it as a fully automated bank that:
-- Accepts loan applications from customers
-- Verifies their documents automatically (using AI)
-- Calculates how much money they can borrow
-- Approves or rejects loans intelligently
-- Allows customers to negotiate interest rates with a chatbot
-- Lets bank admins manage thousands of applications
-
-### Real-World Example:
-**Before this system:**
-- Customer fills paper forms → waits days
-- Bank staff manually checks documents → takes hours
-- Loan approval → 5-7 days
-
-**With this system:**
-- Customer applies online → instant
-- AI checks documents → 2 minutes
-- Loan decision → within 1 hour
-- Everything tracked on blockchain (transparent & secure)
+1.  **Customer Login**: OTP-based authentication (SHA-256 hashed for security).
+2.  **Apply**: User submits personal details and uploads documents.
+3.  **OCR Verification**: Background workers scan documents and extract critical data in ~2 minutes.
+4.  **Credit Scoring**: System calculates an exact pre-approved limit and baseline interest rate.
+5.  **Smart Chatbot**: User negotiates the loan using our hybrid AI system. FAQ queries hit the vector database, while negotiation requests hit the LLM. 
+6.  **Admin Review**: Bank staff review the summarized report on the dashboard and 1-click approve.
+7.  **Disbursement**: Funds are transferred, and an immutable JSON contract is saved to IPFS and anchored to the Sepolia blockchain.
 
 ---
 
-## How Does It Work? (Simple Overview)
+## 🏗️ System Architecture
 
-### Step-by-Step Process:
-
-```
+### High-Level Flow
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 1: Customer Login                                     │
-│  Customer enters phone number → Gets OTP → Logs in          │
-│  File: utils/auth.js                                        │
+│                       Frontend (Next.js)                    │
+│   Login (OTP) → Application Form → Chatbot → Dashboard     │
 └─────────────────────────────────────────────────────────────┘
-                           ↓
+                               ↓ (REST API)
 ┌─────────────────────────────────────────────────────────────┐
-│  STEP 2: Fill Application Form                              │
-│  Customer provides: Name, Salary, Loan Amount, Documents    │
-│  File: frontend/app/apply/page.jsx                          │
+│                    Backend Server (Express)                 │
+│   Auth middleware, Route handling, Agent Orchestration      │
 └─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│  STEP 3: Document Verification (OCR)                        │
-│  System scans: Aadhaar, PAN, Bank Statement, Salary Slip    │
-│  File: utils/ocr.js                                         │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│  STEP 4: Credit Score Calculation                           │
-│  System calculates approval score (300-900) based on:       │
-│  - Income Stability, Debt-to-Income, Banking Behavior       │
-│  File: utils/creditScore.js                                 │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│  STEP 5: Chat with AI for Loan Negotiation                  │
-│  Customer negotiates interest rate with chatbot             │
-│  File: server.js (Chat endpoint)                            │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│  STEP 6: Admin Reviews Application                          │
-│  Bank admin approves/rejects from dashboard                 │
-│  File: frontend/app/admin/page.jsx                          │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│  STEP 7: Loan Disbursement                                  │
-│  Money transferred to customer's account                    │
-│  All records saved on blockchain ledger                     │
-│  File: agents/disbursementAgent.js, blockchain/ledger.js    │
-└─────────────────────────────────────────────────────────────┘
+          ↙                   ↓                    ↘
+┌──────────────┐      ┌──────────────┐       ┌──────────────┐
+│  AI Agents   │      │Background Ops│       │  Data Layer  │
+│ - RAG Vector │      │- OCR Worker  │       │ - MongoDB    │
+│ - Ollama Chat│      │- Disburser   │       │ - Redis      │
+│ - Credit Auth│      │- IPFS Upload │       │ - Sepolia ETH│
+└──────────────┘      └──────────────┘       └──────────────┘
 ```
 
 ---
 
-## System Architecture
-
-### High-Level Architecture Diagram
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                         FRONTEND LAYER                           │
-│  (What users see in their browser)                               │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│  │ Login Page   │  │ Apply Page   │  │ Dashboard    │            │
-│  │ (OTP Auth)   │  │ (Form + Docs)│  │ (Loan Status)│            │
-│  └──────────────┘  └──────────────┘  └──────────────┘            │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐                              │
-│  │ Admin Portal │  │ Chat Widget  │                              │
-│  │ (Approvals)  │  │ (Negotiation)│                              │
-│  └──────────────┘  └──────────────┘                              │
-└──────────────────────────────────────────────────────────────────┘
-                           ↕ HTTP API Calls
-┌──────────────────────────────────────────────────────────────────┐
-│                         BACKEND LAYER                            │
-│  (Server that processes everything)                              │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │                    server.js (Main API)                   │   │
-│  │  - Authentication endpoints                               │   │
-│  │  - Document verification endpoints                        │   │
-│  │  - Chat endpoints                                         │   │
-│  │  - Application management                                 │   │
-│  └──────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│  │ AI Agents    │  │ Utils        │  │ Middleware   │            │
-│  │ (Workflow)   │  │ (Helpers)    │  │ (Security)   │            │
-│  └──────────────┘  └──────────────┘  └──────────────┘            │
-└──────────────────────────────────────────────────────────────────┘
-                           ↕ Read/Write Data
-┌──────────────────────────────────────────────────────────────────┐
-│                         DATA LAYER                               │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│  │ MongoDB      │  │ Redis        │  │ Ethereum     │            │
-│  │ (Database)   │  │ (Chat Cache) │  │ (Blockchain) │            │
-│  │ - Users      │  │ - Sessions   │  │ - Smart      │            │
-│  │ - Apps       │  │ - Messages   │  │   Contract   │            │
-│  │              │  │              │  │ - Immutable  │            │
-│  │              │  │              │  │   Ledger     │            │
-│  └──────────────┘  └──────────────┘  └──────────────┘            │
-│                                       ↕ MetaMask                 │
-│                                       ↕ Web3.js                  │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## User Journey Examples
-
-### Example 1: Raj Applies for a ₹5 Lakh Personal Loan
-
-**Day 1 - Morning (10:00 AM)**
-
-1. **Raj visits the website** → `http://localhost:3000`
-   - Sees the landing page (File: `frontend/app/page.jsx`)
-   - Clicks "Apply for Loan"
-
-2. **Login with OTP**
-   - Enters phone: +91-9876543210
-   - Backend generates OTP hash (File: `utils/auth.js`)
-   - Console shows: `🔒 Hash: a3f8b9c2...`
-   - Developer opens `http://localhost:3001/otp-page.html`
-   - Pastes hash → Gets OTP: `456789`
-   - Raj enters OTP → Logged in ✅
-
-3. **Fills Application Form**
-   - Name: Raj Kumar
-   - Salary: ₹60,000/month
-   - Loan Amount: ₹5,00,000
-   - Uploads documents:
-     - Aadhaar Card (front & back)
-     - PAN Card
-     - Bank Statement (last 6 months)
-     - Salary Slip
-   - **📸 Takes Live Photo** (selfie for identity verification)
-     - Camera captures face directly in browser
-     - Image compressed to ~50KB for fast upload
-     - Stored securely for admin review
-
-4. **System Processes Documents (Auto)**
-   - OCR scans Aadhaar → Extracts: Name, DOB, Address (File: `utils/ocr.js`)
-   - OCR scans PAN → Validates PAN number (File: `utils/ocr.js`)
-   - OCR scans Bank Statement → Calculates avg balance (File: `utils/ocr.js`)
-   - OCR scans Salary Slip → Verifies income (File: `utils/ocr.js`)
-   - **Live Photo** → Saved for admin identity verification
-   - **Time taken: 2 minutes**
-
-5. **Credit Score Calculation**
-   - System calculates approval score (File: `utils/creditScore.js`)
-   - Factors considered:
-     ```
-     Income Stability:     ₹60,000 × 12 = ₹7,20,000/year → Score: 85/100
-     Debt-to-Income:       No existing loans → Score: 100/100
-     Loan Feasibility:     ₹5L is 8.3x monthly salary → Score: 75/100
-     Banking Behavior:     Avg balance ₹50,000 → Score: 80/100
-     Employment Type:      Salaried (stable) → Score: 90/100
-     
-     Weighted Average = (85×0.25) + (100×0.25) + (75×0.20) + (80×0.15) + (90×0.15)
-                      = 21.25 + 25 + 15 + 12 + 13.5
-                      = 86.75
-     
-     Final Score = 300 + (86.75 × 600/100) = 300 + 520.5 = 820.5 ≈ 821
-     ```
-   - **Approval Score: 821/900 (Grade: A)**
-
-6. **AI Chat Negotiation**
-   - Bot: "Hi Raj! Based on your score (821), you're pre-approved for ₹5,00,000 at 12% interest. Accept or negotiate?"
-   - Raj: "Can you reduce the interest rate?"
-   - Bot: "I can offer 11.75%. Would you like to accept?"
-   - Raj: "Yes, accepted"
-   - **Final Offer: ₹5,00,000 @ 11.75% for 36 months**
-   - EMI: ₹16,622/month
-
-7. **Application Submitted**
-   - Application ID: LOAN-20260204-001
-   - Status: Pending Admin Approval
-   - All data saved to:
-     - MongoDB (File: `server/db.js`)
-     - **Ethereum Blockchain** (File: `blockchain/web3Client.js`)
-   - **Blockchain Transaction Hash:** `0xa3f8b9c2d1e5f4a7...`
-   - **View on Etherscan:** https://sepolia.etherscan.io/tx/0xa3f8b9c2d1e5f4a7...
-
-**Day 1 - Afternoon (2:00 PM)**
-
-8. **Admin Reviews Application**
-   - Admin logs in: `admin@bfsi.com` / `admin123`
-   - Sees Raj's application in dashboard (File: `frontend/app/admin/page.jsx`)
-   - Reviews:
-     - Credit Score: 821 ✅
-     - Documents: All verified ✅
-     - Fraud Check: No red flags ✅
-   - Clicks "Approve"
-   - System uses **Optimistic Locking** (File: `server/utils/optimisticLock.js`)
-     - Checks version number (prevents conflicts if another admin modified it)
-     - Updates status to "Approved"
-
-9. **Loan Disbursement (Auto)**
-   - Background worker picks up approval (File: `workers/approvalWorker.js`)
-   - Creates sanction letter (File: `agents/documentAgent.js`)
-   - Initiates fund transfer (File: `agents/disbursementAgent.js`)
-   - Records transaction on **Ethereum blockchain**:
-     ```json
-     {
-       "loanId": "LOAN-20260204-001",
-       "userId": "+919876543210",
-       "amount": 500000,
-       "recipientAccount": "ACC123456",
-       "transactionId": "TXN-20260204-001",
-       "timestamp": 1738674600,
-       "blockNumber": 5234567,
-       "txHash": "0xd5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5"
-     }
-     ```
-   - **View on Blockchain:** https://sepolia.etherscan.io/tx/0xd5e6f7a8...
-
-10. **Raj Receives Money**
-    - SMS: "₹5,00,000 credited to your account"
-    - Email with loan agreement and EMI schedule
-    - First EMI due: March 4, 2026
-
----
-
-## File Structure Explained
-
-### 📂 Root Directory
-```
-ey-techathon/
-├── server.js              ← Main backend server (Express API)
-├── package.json           ← Dependencies list
-├── .env                   ← Configuration (DB URLs, secrets)
-└── README.md              ← Basic setup instructions
-```
-
----
-
-### 📂 `/frontend` - What Users See
-
-#### `frontend/app/page.jsx`
-**What it does:** Landing page with "Lumina Institutional Banking" design
-**Example:** Customer sees hero section with "Apply for Loan" button
-
-#### `frontend/app/login/page.jsx`
-**What it does:** OTP-based login form
-**Example:** 
-- User enters phone: +91-9876543210
-- Clicks "Send OTP"
-- Enters OTP from console
-- Logs in
-
-#### `frontend/app/apply/page.jsx`
-**What it does:** Multi-step loan application form
-**Steps:**
-1. Personal details (Name, DOB, Address)
-2. Employment details (Salary, Company)
-3. Loan details (Amount, Tenure)
-4. Document upload (Aadhaar, PAN, etc.)
-
-#### `frontend/app/dashboard/page.jsx`
-**What it does:** Shows user's loan applications
-**Example:**
-```
-┌────────────────────────────────────────┐
-│  Your Loan Applications                │
-├────────────────────────────────────────┤
-│  LOAN-001  ₹5,00,000  Approved  ✅     │
-│  Next EMI: ₹16,622 on Mar 4, 2026      │
-├────────────────────────────────────────┤
-│  LOAN-002  ₹2,00,000  Pending   ⏳     │
-└────────────────────────────────────────┘
-```
-
-#### `frontend/app/admin/page.jsx`
-**What it does:** Admin dashboard to review applications
-**Features:**
-- View all pending applications
-- Approve/reject with one click
-- Add admin notes
-- Search and filter
-
-#### `frontend/otp-page.html`
-**What it does:** Reveals OTP from SHA-256 hash (for development)
-**Example:**
-- Console shows hash: `a3f8b9c2d1e5...`
-- Admin pastes hash here
-- Gets actual OTP: `456789`
-
----
-
-### 📂 `/agents` - AI Workflow Agents
-
-#### `agents/masterAgent.js`
-**What it does:** Main orchestrator for loan process
-**Functions:**
-- `detectLoanIntent()` - Understands customer's request
-- `presentAndNegotiateOffer()` - Handles loan negotiation
-**Example:** Routes customer to correct workflow based on intent
-
-#### `agents/dataAgent.js`
-**What it does:** Collects and validates customer data
-**Functions:**
-- `collectUserData()` - Gathers form data
-- Validates required fields
-- Records consent on blockchain
-
-#### `agents/verificationAgent.js`
-**What it does:** KYC (Know Your Customer) verification
-**Functions:**
-- `verifyKYC()` - Checks document authenticity
-- Cross-references with government databases (simulated)
-- Fraud detection
-
-#### `agents/creditAgent.js`
-**What it does:** Credit risk assessment
-**Functions:**
-- `analyzeCredit()` - Evaluates creditworthiness
-- Checks credit history
-- Calculates risk score
-
-#### `agents/underwritingAgent.js`
-**What it does:** Risk-based pricing
-**Functions:**
-- `evaluateRiskAndPrice()` - Determines interest rate
-- Calculates loan eligibility
-- Sets terms and conditions
-
-#### `agents/approvalAgent.js`
-**What it does:** Final approval decision
-**Functions:**
-- `executeApproval()` - Makes final approve/reject decision
-- Records decision on blockchain
-- Notifies customer
-
-#### `agents/documentAgent.js`
-**What it does:** Document generation
-**Functions:**
-- `generateSanctionLetter()` - Creates loan agreement PDF
-- Generates EMI schedule
-- Creates digital signatures
-
-#### `agents/disbursementAgent.js`
-**What it does:** Fund transfer
-**Functions:**
-- `disburseFunds()` - Initiates bank transfer
-- Records transaction on blockchain
-- Sends confirmation SMS/email
-
-#### `agents/monitoringAgent.js`
-**What it does:** Post-disbursement tracking
-**Functions:**
-- `logEmiPayment()` - Records monthly EMI payments
-- Sends payment reminders
-- Tracks overdue payments
-
----
-
-### 📂 `/utils` - Helper Functions
-
-#### `utils/auth.js`
-**What it does:** User authentication and security
-**Functions:**
-- `sendOTP()` - Generates OTP hash (SHA-256)
-- `verifyLoginOTP()` - Validates OTP
-- `loginAdmin()` - Admin login with password
-- `authMiddleware()` - Protects API endpoints
-**Example:**
-```javascript
-// Generate OTP
-const { otpHash } = await sendOTP({ 
-  phone: '+919876543210',
-  name: 'Raj Kumar',
-  accountNumber: 'ACC123456'
-});
-// Console logs hash: a3f8b9c2d1e5...
-```
-
-#### `utils/creditScore.js`
-**What it does:** Approval score calculation (300-900)
-**Functions:**
-- `calculateApprovalScore()` - Main scoring algorithm
-- `calculatePreApprovedLimit()` - Max loan amount
-- `calculateEMI()` - Monthly payment calculation
-- `generateEMISchedule()` - Full payment schedule
-**Example:**
-```javascript
-const score = calculateApprovalScore({
-  monthlySalary: 60000,
-  existingEMI: 0,
-  bankBalance: 50000,
-  employmentType: 'salaried'
-}, {}, 500000);
-// Returns: { score: 821, grade: 'A', factors: {...} }
-```
-
-#### `utils/ocr.js`
-**What it does:** Document scanning with OCR (Optical Character Recognition)
-**Functions:**
-- `parseAadhaar()` - Extracts data from Aadhaar card
-- `parsePAN()` - Extracts PAN number
-- `parseBankStatement()` - Analyzes bank statement
-- `parseSalarySlip()` - Extracts salary info
-- `performFraudCheck()` - Detects document tampering
-**Example:**
-```javascript
-const aadhaar = await parseAadhaar('/uploads/aadhaar.jpg');
-// Returns:
-// {
-//   name: 'Raj Kumar',
-//   aadhaarNumber: '1234-5678-9012',
-//   dob: '1990-05-15',
-//   address: 'Delhi, India'
-// }
-```
-
-#### `utils/hash.js`
-**What it does:** Cryptographic hashing for blockchain
-**Functions:**
-- `hashData()` - Creates SHA-256 hash
-- Used for blockchain integrity
-
-#### `utils/geminiClient.js`
-**What it does:** AI chatbot integration
-**Functions:**
-- `callGemini()` - Sends queries to Google Gemini AI
-- Used for loan negotiation chat
-
-#### `utils/pinataClient.js`
-**What it does:** IPFS document storage
-**Functions:**
-- `uploadToIPFS()` - Stores documents on decentralized storage
-- `getFromIPFS()` - Retrieves documents
-
----
-
-### 📂 `/blockchain` - Immutable Ethereum Ledger (MODULAR)
-
-The system stores only compact, verifiable references on-chain while keeping full, readable records off-chain (Pinata/IPFS + MongoDB). This minimizes gas costs while preserving an immutable audit trail.
-
-What is stored on-chain (compact references):
-
-- bytes32 hashes (keccak256) of identifiers: `loanId`, `sessionId`, `docId`, `userId`.
-- numeric status codes, timestamps, and small metadata (e.g., event indexes).
-- a single authoritative pointer per user: the hash/CID of the full master JSON (stored as a bytes32 reference or as the CID string depending on contract design).
-
-What is stored off-chain (Pinata/IPFS + local backup + MongoDB):
-
-- Full human-readable `mastercontract_{userId}.json` containing:
-  - Complete loan application details (amount, term, interest, EMI schedule)
-  - Plaintext chat transcripts (or redacted versions per privacy policy)
-  - Document metadata and IPFS CIDs for each uploaded file
-  - Credit history entries and calculated scores
-  - Disbursement and payment records with bank transaction IDs
-  - Signatures, timestamps, and any supporting evidence
-- Local backup: `blockchain/master_contracts/{userId}_master.json`
-
-Why this separation?
-
-- Cost: Storing large JSON or plaintext on-chain is prohibitively expensive; storing compact hashes keeps gas use low.
-- Privacy & compliance: Sensitive PII and full transcripts remain off-chain and can be access-controlled.
-- Verifiability: A verifier can fetch the master JSON from IPFS, hash it, and compare to the on-chain hash/CID to prove integrity.
-
-Recommended workflow (backend):
-
-1. Aggregate on-chain references and off-chain data into a single `mastercontract_{userId}.json`.
-2. Upload `mastercontract_{userId}.json` to Pinata/IPFS → receive `ipfsCid`.
-3. Save local backup at `blockchain/master_contracts/{userId}_master.json`.
-4. Store a compact reference on-chain (e.g., `bytes32 masterHash = keccak256(ipfsCid)` or `bytes32 keccak256(masterJson)`), by calling a protected contract write (if your contracts expose a method for this). This on-chain write is minimal (one small tx) and serves as the immutable anchor.
-
-Pseudo-code (backend):
-
-```javascript
-// 1. Create master JSON and upload
-const result = await generateAndUploadMasterContract(userId); // returns { ipfsHash, localPath }
-const ipfsCid = result.ipfsHash;
-
-// 2. Compute compact on-chain reference
-const masterHash = hashToBytes32(ipfsCid); // or hash entire JSON for stronger binding
-
-// 3. Store the compact reference on-chain (requires admin)
-// Example: loanCoreContract.methods.storeMasterReference(userIdHash, masterHash).send(txOptions)
-```
-
-Important file locations:
-
-- Contract sources: `blockchain/contracts/*.sol`
-- Contract ABIs: `blockchain/contracts/*.abi.json`
-- Backend integration: `blockchain/web3Client.js` (provides `generateAndUploadMasterContract`)
-- Local master-contract backups: `blockchain/master_contracts/`
-
-Environment variables (update `.env` accordingly):
-
+## 🚀 Quick Start Setup
+
+### Prerequisites
+*   [Node.js](https://nodejs.org/) (v18+)
+*   [Ollama](https://ollama.ai/) running locally with `llama3.1` and `nomic-embed-text` installed.
+*   A Sepolia RPC URL and Wallet Private Key.
+*   MongoDB Atlas URI and Pinata/IPFS API keys.
+
+### 1. Configure Environment
+Create a `.env` file in the root based on `.env.example`:
 ```env
-# Network
-BLOCKCHAIN_NETWORK=SEPOLIA
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+# Database
+MONGO_URI=your_mongodb_uri
+REDIS_URL=redis://localhost:6379
 
-# Backend signing key (PRIVATE KEY) — must be a valid 0x-prefixed 64-hex string
-BLOCKCHAIN_PRIVATE_KEY=0xYourValidPrivateKeyHere
+# Ollama
+OLLAMA_BASE_URL=http://localhost:11434
 
-# Contracts (paste deployed addresses)
-ACCESS_CONTROL_CONTRACT_ADDRESS=0x250BfF3657a58e091E606E0C647C7b0dcc54A3eF
-LOAN_CORE_CONTRACT_ADDRESS=0x342773f4f8d0614287EdF221c884Dcee84a29928
-CREDIT_REGISTRY_CONTRACT_ADDRESS=0x62C93f5E4E3d22fD6336CB0aEA99e0C87A6B47aD
-PAYMENT_LEDGER_CONTRACT_ADDRESS=0xd314fB3A9367909F5Da1Ad221b75daF6AFDf3785
+# Blockchain
+BLOCKCHAIN_PRIVATE_KEY=your_wallet_private_key
 ```
 
-Backend integration notes:
-
-- `blockchain/web3Client.js` aggregates on-chain references and off-chain data into a single master JSON, uploads to Pinata (returns `ipfsHash`) and writes a local backup.
-- The backend should then store a compact on-chain reference (keccak256 of `ipfsCid` or of the full JSON) using an AccessControl-protected write. If your deployed contracts expose a specific `storeMasterReference` or similar method, the backend will call that; otherwise implement an equivalent minimal store in your AccessControl-enabled contract.
-- ABI files must match the deployed contracts. If you redeploy, re-copy ABIs from Remix into `blockchain/contracts/*.abi.json`.
-
-Add backend address as admin (required for writes):
-
-For each deployed contract, ensure the backend address is listed as an admin so it can perform the small on-chain anchor write (one `addMasterReference`-style tx per master JSON). Use Etherscan or Remix to add the backend address to `AccessControl` if needed.
-
-Tips and common issues:
-
-- Private key format: MetaMask exports the key without `0x`; add `0x` prefix when pasting into `.env` and ensure it contains only hex characters `0-9a-f` (lower/upper case allowed). Invalid characters will cause `initWeb3()` to fail with `Invalid Private Key`.
-- If you see `⚠️ [Blockchain] ABI not found: ...`, confirm ABI files exist at `blockchain/contracts/*.abi.json` and match the deployed contracts.
-- If you prefer not to run with a backend signing key, leave `BLOCKCHAIN_PRIVATE_KEY` unset and use MetaMask/Frontend signing for writes; the backend will still generate and upload the master JSON but an admin must submit the on-chain anchor manually.
-
-
-
----
-
-### 📂 `/server` - Scalability Infrastructure
-
-#### `server/db.js`
-**What it does:** MongoDB connection with pooling
-**Features:**
-- 50 connections per server instance
-- Auto-reconnect on failure
-- Creates indexes for fast queries
-**Example:**
-```javascript
-const db = getDB();
-const apps = await db.collection('applications').find({}).toArray();
-```
-
-#### `server/utils/redisClient.js`
-**What it does:** Redis for real-time chat
-**Functions:**
-- `setChatSession()` - Stores chat session
-- `getChatHistory()` - Retrieves messages
-- `publishChatEvent()` - Broadcasts message to all servers
-**Example:**
-```javascript
-await addChatMessage(sessionId, {
-  role: 'user',
-  content: 'Can you reduce interest rate?'
-});
-```
-
-#### `server/utils/optimisticLock.js`
-**What it does:** Prevents data conflicts when 1000+ admins work simultaneously
-**How it works:**
-```
-Admin A reads application (version: 1)
-Admin B reads application (version: 1)
-
-Admin A saves changes → version: 2 ✅
-Admin B tries to save → CONFLICT! ❌
-System says: "Someone else modified this, refresh and try again"
-```
-**Functions:**
-- `updateWithVersion()` - Update with conflict detection
-- `updateWithRetry()` - Auto-retry 3 times with exponential backoff
-
-#### `server/utils/mongoLock.js`
-**What it does:** Prevents race conditions in critical operations
-**Example:** 
-```javascript
-// Only ONE server can disburse funds at a time
-await withLock(db, `loan:${loanId}`, async () => {
-  await transferMoney(loanId, amount);
-}, 15000); // Lock expires in 15 seconds
-```
-
-#### `server/utils/eventQueue.js`
-**What it does:** Background job queue
-**Functions:**
-- `publishEvent()` - Adds job to queue
-- `claimEvent()` - Worker picks up job
-- `completeEvent()` - Mark job as done
-**Example:**
-```javascript
-// API publishes event
-await publishEvent(db, 'document:uploaded', {
-  documentId: 'DOC-001',
-  userId: 'USER-123'
-});
-
-// Worker processes event (in background)
-const event = await claimEvent(db, 'document:uploaded', 'worker-1');
-// Process OCR...
-await completeEvent(db, event._id);
-```
-
----
-
-### 📂 `/workers` - Background Processors
-
-#### `workers/ocrWorker.js`
-**What it does:** Processes document uploads in background
-**Workflow:**
-1. Polls event queue for `document:uploaded`
-2. Runs OCR on uploaded document
-3. Extracts data
-4. Publishes `document:verified` event
-**Example:**
-```
-[10:30:00] Worker: Claimed event document:uploaded (DOC-001)
-[10:30:15] Worker: OCR completed, extracted 12 fields
-[10:30:16] Worker: Published document:verified event
-```
-
-#### `workers/approvalWorker.js`
-**What it does:** Processes loan approvals in background
-**Workflow:**
-1. Polls for `loan:approval_pending`
-2. Runs final checks
-3. Updates blockchain ledger (with distributed lock)
-4. Sends notifications
-**Example:**
-```
-[14:30:00] Worker: Claimed loan:approval_pending (LOAN-001)
-[14:30:05] Worker: Acquired lock for ledger write
-[14:30:06] Worker: Recorded approval on blockchain
-[14:30:07] Worker: Released lock
-[14:30:08] Worker: Sent SMS notification
-```
-
----
-
-### 📂 Docker & Deployment
-
-#### `docker-compose.yml`
-**What it does:** Runs entire system with one command
-**Components:**
-- MongoDB container (database)
-- Redis container (chat cache)
-- 3 Backend containers (load balanced)
-- 2 Worker containers (OCR, Approval)
-- Nginx container (load balancer)
-**Usage:**
+### 2. Install Dependencies
 ```bash
-docker-compose up -d
-# Starts all 8 containers
+npm install
+cd frontend
+npm install
 ```
 
-#### `Dockerfile`
-**What it does:** Container image for backend
-**Contains:**
-- Node.js runtime
-- All dependencies
-- Health check script
+### 3. Generate Vector Cache (New Feature)
+To ensure instant server boot times, pre-generate the FAQ embeddings:
+```bash
+npm run embed
+# This creates data/embeddings_cache.json
+```
 
-#### `nginx.conf`
-**What it does:** Load balancer configuration
-**Strategy:** Least-connections algorithm
-**Example:**
+### 4. Run the Platform
+Open two terminals:
+```bash
+# Terminal 1: Backend Server
+npm start
+
+# Terminal 2: Frontend
+cd frontend
+npm run dev
 ```
-Request 1 → Backend-1 (0 connections)
-Request 2 → Backend-2 (0 connections)
-Request 3 → Backend-3 (0 connections)
-Request 4 → Backend-1 (1 connection) ← least loaded
-```
+Visit `http://localhost:3000`
+
+---
+
+## 🛠️ Using the Standalone AI Tools
+
+During the hackathon, we created standalone scripts to easily test individual components without running the entire React frontend.
+
+1.  **`node scripts/generate_embeddings.js` (or `npm run embed`)**
+    Manually compile `data/basic_questions.json` into vector embeddings for the RAG engine.
+2.  **`node verify_all_docs.js`**
+    Test the OCR engine locally. Ensure you have sample images in `tests/samples/`.
+3.  **`node reproduce_aadhaar.js` / `reproduce_pan.js`**
+    Test specific document extraction rules and regex matching in isolation.
+
+---
+
+## 💻 Tech Stack
+
+*   **Frontend**: Next.js, React, TailwindCSS
+*   **Backend**: Node.js, Express.js
+*   **Database**: MongoDB (Storage), Redis (Chat Sessions & Queues)
+*   **AI/ML**: Ollama, LangChain, Google Gemini (Fallback), Tesseract.js (OCR), Jimp (Image Pre-processing)
+*   **Web3**: Web3.js, Ethereum/Sepolia, IPFS/Pinata
 
 ---
 
