@@ -1,0 +1,102 @@
+[
+    {
+        "question": "What is my name?",
+        "answer": "Your name is {name}. 😊"
+    },
+    {
+        "question": "Who am I?",
+        "answer": "You are {name}, and you're currently exploring a personal loan with us!"
+    },
+    {
+        "question": "What is the loan amount I applied for?",
+        "answer": "You've applied for a loan of ₹{loanAmount}."
+    },
+    {
+        "question": "How much loan did I request?",
+        "answer": "You requested ₹{loanAmount} as your loan amount."
+    },
+    {
+        "question": "What is the interest rate?",
+        "answer": "The current interest rate offered to you is {interestRate}% per annum."
+    },
+    {
+        "question": "What rate am I getting?",
+        "answer": "Based on your profile, you're being offered {interestRate}% p.a."
+    },
+    {
+        "question": "What is my credit score?",
+        "answer": "Your approval score is {creditScore} out of 900."
+    },
+    {
+        "question": "What is my CIBIL score?",
+        "answer": "Your credit/approval score stands at {creditScore}/900."
+    },
+    {
+        "question": "What is the maximum loan I can get?",
+        "answer": "Based on your profile, your pre-approved limit is ₹{preApprovedLimit}."
+    },
+    {
+        "question": "How much am I eligible for?",
+        "answer": "You're eligible for up to ₹{preApprovedLimit} based on your credit assessment."
+    },
+    {
+        "question": "What is my EMI?",
+        "answer": "Your estimated EMI would be around ₹{maxEMI} per month."
+    },
+    {
+        "question": "How much EMI will I pay monthly?",
+        "answer": "Your monthly EMI is estimated at ₹{maxEMI}."
+    },
+    {
+        "question": "What is the loan purpose?",
+        "answer": "The purpose you mentioned for your loan is: {loanPurpose}."
+    },
+    {
+        "question": "What is my phone number?",
+        "answer": "Your registered phone number is {phone}."
+    },
+    {
+        "question": "What is my account number?",
+        "answer": "Your account number on file is {accountNumber}."
+    },
+    {
+        "question": "What documents did I upload?",
+        "answer": "You've uploaded your identity and financial documents for verification. These include your Aadhaar, PAN, and other supporting docs."
+    },
+    {
+        "question": "Is my KYC verified?",
+        "answer": "Your KYC documents have been processed through our AI verification system. You can check the verification status on your dashboard."
+    },
+    {
+        "question": "What is the loan tenure?",
+        "answer": "The standard tenure ranges from 12 to 60 months. You can discuss the best option for you during our negotiation."
+    },
+    {
+        "question": "How does the loan process work?",
+        "answer": "It's simple! Upload docs → AI verifies → Credit scored → We chat and negotiate your rate → Blockchain approval → Funds disbursed. All in minutes! 🚀"
+    },
+    {
+        "question": "What is the status of my application?",
+        "answer": "Your application is currently in the negotiation phase. Once we finalize the terms, it'll move to approval!"
+    },
+    {
+        "question": "When will I get the money?",
+        "answer": "Once you accept the offer, funds are typically disbursed within 24-48 hours after final approval."
+    },
+    {
+        "question": "Can I prepay my loan?",
+        "answer": "Yes! You can prepay your loan anytime. There may be minimal foreclosure charges depending on the tenure remaining."
+    },
+    {
+        "question": "What is my salary?",
+        "answer": "Your declared monthly salary is ₹{monthlySalary}."
+    },
+    {
+        "question": "What city am I from?",
+        "answer": "Your city on file is {city}."
+    },
+    {
+        "question": "What is your name?",
+        "answer": "I'm your AI Loan Advisor! You can call me Advisor. I'm here to help you get the best deal on your loan. 😊"
+    }
+]

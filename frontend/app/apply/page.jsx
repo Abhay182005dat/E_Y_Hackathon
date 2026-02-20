@@ -366,6 +366,7 @@ export default function ApplyPage() {
     const [chatSessionId, setChatSessionId] = useState(null);
     const [sessionRestored, setSessionRestored] = useState(false);
     const [restoringSession, setRestoringSession] = useState(false);
+    const [isBotTyping, setIsBotTyping] = useState(false);
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -540,6 +541,13 @@ export default function ApplyPage() {
             if (documents.salarySlip) formDataAPI.append('salarySlip', documents.salarySlip);
             if (livePhoto) formDataAPI.append('livePhoto', livePhoto);
 
+            // Send user-entered name & salary so the server can compare them
+            // against OCR-extracted values in performFraudCheck()
+            formDataAPI.append('customerData', JSON.stringify({
+                name: formData.name,
+                monthlySalary: formData.monthlySalary
+            }));
+
             const res = await fetch(`${API_URL}/api/verify-docs`, {
                 method: 'POST',
                 body: formDataAPI
@@ -550,7 +558,24 @@ export default function ApplyPage() {
             if (data.ok) {
                 setVerification(data);
 
-                // Calculate approval score
+                // ── FRAUD GATE ──────────────────────────────────────────────────
+                // If any high-severity fraud issue is detected, block the application.
+                const fc = data.fraudCheck;
+                if (fc && fc.flagged) {
+                    // Build a human-readable error from the issue list
+                    const highIssues = fc.issues.filter(i => i.severity === 'high');
+                    const msgs = (highIssues.length ? highIssues : fc.issues)
+                        .map(i => i.message);
+                    setError(
+                        '⛔ Verification Failed — application cannot proceed:\n' +
+                        msgs.join('\n')
+                    );
+                    setLoading(false);
+                    return; // Hard stop — do NOT proceed to approval score or step 2
+                }
+                // ────────────────────────────────────────────────────────────────
+
+                // Calculate approval score (only reached when fraud check passes)
                 const scoreRes = await fetch(`${API_URL}/api/calculate-score`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -579,9 +604,9 @@ export default function ApplyPage() {
             setError('Connection error: ' + err.message);
         }
 
-
         setLoading(false);
     };
+
 
     // Step 3: Chat - calls backend which uses Ollama AI
     const sendChatMessage = async () => {
@@ -591,6 +616,7 @@ export default function ApplyPage() {
         setMessages([...messages, userMsg]);
         const userText = chatInput;
         setChatInput('');
+        setIsBotTyping(true);
 
         try {
             const res = await fetch(`${API_URL}/api/chat`, {
@@ -634,6 +660,8 @@ export default function ApplyPage() {
             }
         } catch (err) {
             setMessages(prev => [...prev, { role: 'bot', content: 'Connection error.' }]);
+        } finally {
+            setIsBotTyping(false);
         }
     };
 
@@ -986,6 +1014,14 @@ export default function ApplyPage() {
                                     {msg.content}
                                 </div>
                             ))}
+                            {isBotTyping && (
+                                <div style={{ ...bubbleStyle('bot'), display: 'flex', alignItems: 'center', gap: '4px', padding: '14px 22px' }}>
+                                    <span className="typing-dot" style={{ animationDelay: '0s' }} />
+                                    <span className="typing-dot" style={{ animationDelay: '0.2s' }} />
+                                    <span className="typing-dot" style={{ animationDelay: '0.4s' }} />
+                                    <span style={{ marginLeft: '8px', fontSize: '13px', color: '#64748b', fontStyle: 'italic' }}>AI is thinking...</span>
+                                </div>
+                            )}
                         </div>
                         <div style={chatFooterStyle}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1001,7 +1037,7 @@ export default function ApplyPage() {
                                     placeholder="Type your message..."
                                     style={{ width: '100%', background: 'rgba(255,255,255,0.08)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}
                                 />
-                                <button className="btn btn-primary" onClick={sendChatMessage} style={{ padding: '12px 24px', fontWeight: '600' }}>Send ➜</button>
+                                <button className="btn btn-primary" onClick={sendChatMessage} disabled={isBotTyping || !chatInput.trim()} style={{ padding: '12px 24px', fontWeight: '600', opacity: isBotTyping ? 0.5 : 1, cursor: isBotTyping ? 'not-allowed' : 'pointer' }}>{isBotTyping ? '⏳' : 'Send ➜'}</button>
                             </div>
                         </div>
                     </div>
@@ -1047,6 +1083,20 @@ export default function ApplyPage() {
                     0% { transform: scale(0.6); opacity: 0.8; }
                     50% { transform: scale(1); opacity: 0.2; }
                     100% { transform: scale(1.4); opacity: 0; }
+                }
+
+                .typing-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #3b82f6, #22d3ee);
+                    display: inline-block;
+                    animation: typingBounce 1.4s infinite ease-in-out;
+                }
+
+                @keyframes typingBounce {
+                    0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+                    40% { transform: scale(1); opacity: 1; }
                 }
             `}</style>
         </div>

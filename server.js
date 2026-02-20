@@ -14,6 +14,7 @@ const { connectDB, getDB } = require('./server/db');
 const { publishEvent, getQueueStats } = require('./server/utils/eventQueue');
 const { updateWithVersion, updateWithRetry } = require('./server/utils/optimisticLock');
 const { withLock } = require('./server/utils/mongoLock');
+const { initializeVectorStore, searchBasicQuestions, fillAnswerTemplate } = require('./server/utils/vectorStore');
 
 // Blockchain Utils (Ethereum Web3)
 const {
@@ -80,25 +81,40 @@ let blockchainInitialized = false;
         dbInitialized = true;
         console.log('✅ MongoDB: Scalability features initialized');
 
-        // Initialize Redis for chat streaming
-        try {
-            await connectRedis();
-            redisInitialized = true;
-            console.log('✅ Redis: Chat streaming enabled');
-        } catch (redisErr) {
-            console.warn('⚠️ Redis not available. Chat will use fallback mode:', redisErr.message);
-            // Continue without Redis - system still works
-        }
+        // Initialize VectorStore, Redis, and Blockchain in PARALLEL (don't block each other)
+        const [vecResult, redisResult, blockchainResult] = await Promise.allSettled([
+            // VectorStore — now instant (loads cache, defers Ollama to first query)
+            (async () => {
+                const vectorReady = await initializeVectorStore();
+                if (vectorReady) {
+                    console.log('✅ VectorStore: FAQ search ready (LangChain + Ollama)');
+                } else {
+                    console.warn('⚠️ VectorStore not initialized. FAQ will fallback to LLM.');
+                }
+            })(),
 
-        // Initialize Blockchain (Ethereum Web3)
-        try {
-            blockchainInitialized = await initWeb3();
-            if (blockchainInitialized) {
-                console.log('✅ Blockchain: Ethereum ledger connected (immutable audit trail enabled)');
-            }
-        } catch (blockchainErr) {
-            console.warn('⚠️ Blockchain not available. Audit trail will use JSON fallback:', blockchainErr.message);
-            // Continue without blockchain - system still works
+            // Redis
+            (async () => {
+                await connectRedis();
+                redisInitialized = true;
+                console.log('✅ Redis: Chat streaming enabled');
+            })(),
+
+            // Blockchain (Ethereum Web3)
+            (async () => {
+                blockchainInitialized = await initWeb3();
+                if (blockchainInitialized) {
+                    console.log('✅ Blockchain: Ethereum ledger connected (immutable audit trail enabled)');
+                }
+            })()
+        ]);
+
+        // Log any failures (system continues regardless)
+        if (redisResult.status === 'rejected') {
+            console.warn('⚠️ Redis not available. Chat will use fallback mode:', redisResult.reason?.message);
+        }
+        if (blockchainResult.status === 'rejected') {
+            console.warn('⚠️ Blockchain not available. Audit trail will use JSON fallback:', blockchainResult.reason?.message);
         }
     } catch (err) {
         console.error('❌ Failed to connect to MongoDB:', err.message);
@@ -417,6 +433,16 @@ app.post('/api/verify-docs', upload.fields([
         const files = req.files || {};
         const results = {};
 
+        // Parse customerData sent as a JSON string in the multipart form
+        let customerData = null;
+        if (req.body && req.body.customerData) {
+            try {
+                customerData = JSON.parse(req.body.customerData);
+            } catch (e) {
+                console.warn('[verify-docs] Failed to parse customerData:', e.message);
+            }
+        }
+
         // Parse each document
         if (files.aadhaar?.[0]) {
             results.aadhaar = await parseAadhaar(files.aadhaar[0].path);
@@ -543,8 +569,8 @@ app.post('/api/verify-docs', upload.fields([
         console.log(`   Average Confidence: ${(avgConfidence * 100).toFixed(1)}%`);
         console.log(`${'='.repeat(80)}\n`);
 
-        // Perform fraud check with customer data for salary verification
-        const fraudCheck = performFraudCheck(results, req.body.customerData);
+        // Perform fraud check with customer data for salary & name verification
+        const fraudCheck = performFraudCheck(results, customerData);
 
         // Include live photo path if uploaded (goes to results.livePhoto for admin)
         if (files.livePhoto?.[0]) {
@@ -737,205 +763,293 @@ app.post('/api/chat', async (req, res) => {
             await incrementChatMetric('total_messages');
         }
 
-        // Check if message is loan-related (simple keyword check for performance)
-        const loanKeywords = ['loan', 'borrow', 'credit', 'emi', 'interest', 'rate', 'money', 'finance', 'apply', 'approve', 'amount', 'eligible', 'tenure', 'payment', 'negotiate', 'accept', 'reject', 'disbursement', 'sanction', 'principal', 'repayment', 'advance', 'funding', 'capital', 'installment', 'debt', 'mortgage', 'collateral', 'limit', 'balance', 'due', 'overdue', 'refinance', 'prepayment', 'foreclosure', 'processing fee', 'documentation', 'salary', 'income', 'kyc', 'verification', 'document', 'approval', 'status', 'application', 'yes', 'no', 'ok', 'proceed'];
         const lower = message.toLowerCase().trim();
-        const isLoanRelated = loanKeywords.some(keyword => lower.includes(keyword)) ||
-            (session.state === 'intro' && lower.length <= 10) || // Allow short greetings in intro state
-            ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)); // Allow plain numbers in active session
 
-        if (!isLoanRelated) {
-            // Reject off-topic queries
-            const response = "I'm here to help with loan applications only! 😊\n\nI can assist you with:\n💰 Loan eligibility & applications\n📊 Interest rates & offers\n💵 EMI calculations\n📝 Document verification\n\nPlease ask about loans, or say 'accept' to proceed with your current offer.";
-
-            if (redisInitialized) {
-                await addChatMessage(sid, { role: 'bot', content: response });
-                await publishChatEvent(sid, 'bot_response', { response, state: 'off_topic' });
-            }
-
-            console.log(`[Chat] ${name} | Off-topic message rejected: "${message}"`);
-            return res.json({ ok: true, response, sessionId: sid, state: session.state, warning: 'off_topic' });
-        }
-
-        // State machine logic - produces consistent responses
+        // ==================== PRIORITY 1: HANDLE ACCEPTED STATE ====================
         let response;
+        let detectedUpdatedAmount = null; // Track loan amount changes for response
 
         if (session.state === 'accepted') {
             response = `Your loan application is already submitted! 🎉\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n📋 Status: Under Review\n\nPlease wait for admin approval.`;
-        } else if (lower.includes('yes') || lower.includes('accept') || lower.includes('proceed') || lower.includes('go ahead') || lower.includes('ok')) {
+
+            // ==================== PRIORITY 2: HANDLE ACCEPTANCE INTENT (yes/accept/approve/proceed) ====================
+        } else if (lower.includes('yes') || lower.includes('accept') || lower.includes('proceed') || lower.includes('go ahead') || lower.includes('approve')) {
             if (session.state === 'negotiating' || session.state === 'offered') {
                 session.state = 'accepted';
                 session.finalRate = session.finalRate || currentRate;
                 session.finalAmount = finalAmount;
 
-                const statusMessage = requestedAmount <= preApprovedLimit
-                    ? '✅ Approved'
-                    : `⚠️ Adjusted to maximum limit`;
-
-                response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n💵 Approved Amount: ₹${finalAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Final Interest Rate: ${session.finalRate}%\n📋 Status: ${statusMessage}\n\n${requestedAmount < preApprovedLimit ? '🎉 Great choice! You got a better rate for borrowing less!' : ''}\n\nYou'll receive SMS confirmation shortly.`;
+                response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Reference ID: LOAN-${sid.slice(-8)}\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n💵 Approved Amount: ₹${finalAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Final Interest Rate: ${session.finalRate}%\n\nYou'll receive SMS confirmation shortly.`;
             } else {
                 session.state = 'offered';
                 response = `Hello ${name}! 👋\n\n📊 Credit Score: ${score}\n💰 Pre-Approved: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${currentRate}%\n\nWould you like to accept this offer or negotiate?`;
             }
-        } else if (lower.includes('negotiate') || lower.includes('reduce') || lower.includes('lower') || lower.includes('rate') || lower.includes('less')) {
-            if (session.negotiationCount >= 2) {
-                response = `I've already offered the best rate I can, ${name}.\n\n📉 Final Rate: ${session.finalRate || (adjustedRate - 0.5)}%\n\nThis is our lowest possible rate. Would you like to accept?`;
-            } else {
-                session.state = 'negotiating';
-                session.negotiationCount++;
-                const reduction = 0.25 * session.negotiationCount;
-                session.finalRate = (adjustedRate - reduction).toFixed(1);
-                response = `I can offer a ${reduction}% reduction, ${name}!\n\n📉 New Rate: ${session.finalRate}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n\n${requestedAmount < preApprovedLimit ? '✨ You already have a better rate for borrowing less!' : ''}\n\nWould you like to accept this offer?`;
-            }
-        } else if (session.state === 'intro' || lower.includes('loan') || lower.includes('apply') || lower.includes('need') || lower.includes('hi') || lower.includes('hello')) {
-            session.state = 'offered';
 
-            const rateBonus = requestedAmount < preApprovedLimit
-                ? `\n🎁 Special Offer: ${(baseRate - adjustedRate).toFixed(1)}% lower rate for borrowing ₹${requestedAmount.toLocaleString()} (${loanUtilization.toFixed(0)}% of your limit)!`
-                : '';
-
-            response = `Hello ${name}! 👋 Based on your verified documents:\n\n📊 Approval Score: ${score / 10}%\n💰 Applied Amount: ₹${requestedAmount.toLocaleString()}\n📊 Maximum Available: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${adjustedRate.toFixed(1)}% ${rateBonus}\n💵 Monthly Salary: ₹${salary.toLocaleString()}\n\n${requestedAmount <= preApprovedLimit ? '✅ Great news! Your requested amount is within your limit!' : '⚠️ Note: Your request exceeds the limit, we can approve up to ₹' + preApprovedLimit.toLocaleString()}\n\nWould you like to accept this offer or negotiate the interest rate?`;
-        } else if (lower.includes('change') && (lower.includes('amount') || lower.includes('loan'))) {
-            // Detect loan amount change request
-            // Use a single regex that captures the number AND any unit suffix immediately after it.
-            // This prevents matching 'l' from words like "applied" or "loan" in the message.
-            // Supports: "2 lakh", "200000", "2,00,000", "200k", "2L", "2 lac", "2.5 lakh"
-            const amountMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|thousand|lakhs|lacs)?\b/i);
-            let newAmount = null;
-
-            if (amountMatch) {
-                let extractedNum = parseFloat(amountMatch[1].replace(/,/g, ''));
-                const unitStr = (amountMatch[2] || '').toLowerCase();
-
-                if (unitStr) {
-                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
-                        extractedNum *= 100000;
-                    } else if (unitStr.includes('thousand')) {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                // Also check for standalone suffix like "2L" or "200k" (letter immediately after number)
-                const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
-                if (shortUnitMatch && !unitStr) {
-                    extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
-                    const shortUnit = shortUnitMatch[2].toLowerCase();
-                    if (shortUnit === 'l') {
-                        extractedNum *= 100000;
-                    } else if (shortUnit === 'k') {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                newAmount = Math.round(extractedNum);
-            }
-
-            if (newAmount && newAmount > 0) {
-                if (newAmount <= preApprovedLimit) {
-                    // Calculate new rate based on utilization
-                    const newUtilization = (newAmount / preApprovedLimit) * 100;
-                    let newRate = baseRate;
-                    if (newUtilization <= 50) {
-                        newRate = baseRate - 2;
-                    } else if (newUtilization <= 75) {
-                        newRate = baseRate - 1;
-                    }
-
-                    session.finalRate = newRate;
-                    response = `✅ Loan amount updated to ₹${newAmount.toLocaleString()}!\n\n📊 New Details:\n💰 Loan Amount: ₹${newAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${newRate.toFixed(1)}%\n📉 Utilization: ${newUtilization.toFixed(0)}%\n\n${newUtilization <= 50 ? '🎉 Great! You get a 2% discount for using ≤50% of your limit!' : newUtilization <= 75 ? '✨ Nice! You get a 1% discount for using ≤75% of your limit!' : ''}\n\nWould you like to accept this offer?`;
-
-                    // Save updated amount to session
-                    session.updatedLoanAmount = newAmount;
-
-                    // Return updated amount to frontend
-                    if (redisInitialized) {
-                        await setChatSession(sid, session, 86400);
-                        await addChatMessage(sid, { role: 'bot', content: response });
-                        await publishChatEvent(sid, 'bot_response', { response, state: session.state, updatedLoanAmount: newAmount });
-                    }
-
-                    return res.json({
-                        ok: true,
-                        response,
-                        sessionId: sid,
-                        state: session.state,
-                        updatedLoanAmount: newAmount
-                    });
-                } else {
-                    response = `⚠️ Sorry ${name}, ₹${newAmount.toLocaleString()} exceeds your pre-approved limit.\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n\nPlease choose an amount up to ₹${preApprovedLimit.toLocaleString()}.`;
-                }
-            } else {
-                response = `I'd be happy to help you change the loan amount! Please specify the new amount.\n\nFor example:\n• "Change amount to 3 lakh"\n• "Change loan to 250000"\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}`;
-            }
-        } else if ((session.state === 'offered' || session.state === 'negotiating') && /^\s*[\d,.\s]+\s*(lakh|lac|lakhs|lacs|l|k|thousand)?\s*$/i.test(lower)) {
-            // Plain number input during active session - treat as amount change
-            const numMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|lakhs|lacs|thousand)?\b/i);
-            let newAmount = null;
-
-            if (numMatch) {
-                let extractedNum = parseFloat(numMatch[1].replace(/,/g, ''));
-                const unitStr = (numMatch[2] || '').toLowerCase();
-
-                if (unitStr) {
-                    if (unitStr.includes('lakh') || unitStr.includes('lac')) {
-                        extractedNum *= 100000;
-                    } else if (unitStr.includes('thousand')) {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                // Check for standalone suffix like "2L" or "200k"
-                const shortUnitMatch = message.match(/(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/);
-                if (shortUnitMatch && !unitStr) {
-                    extractedNum = parseFloat(shortUnitMatch[1].replace(/,/g, ''));
-                    const shortUnit = shortUnitMatch[2].toLowerCase();
-                    if (shortUnit === 'l') {
-                        extractedNum *= 100000;
-                    } else if (shortUnit === 'k') {
-                        extractedNum *= 1000;
-                    }
-                }
-
-                newAmount = Math.round(extractedNum);
-            }
-
-            if (newAmount && newAmount > 0) {
-                if (newAmount <= preApprovedLimit) {
-                    const newUtilization = (newAmount / preApprovedLimit) * 100;
-                    let newRate = baseRate;
-                    if (newUtilization <= 50) {
-                        newRate = baseRate - 2;
-                    } else if (newUtilization <= 75) {
-                        newRate = baseRate - 1;
-                    }
-
-                    session.finalRate = newRate;
-                    response = `✅ Loan amount updated to ₹${newAmount.toLocaleString()}!\n\n📊 New Details:\n💰 Loan Amount: ₹${newAmount.toLocaleString()}\n📊 Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n📈 Interest Rate: ${newRate.toFixed(1)}%\n📉 Utilization: ${newUtilization.toFixed(0)}%\n\n${newUtilization <= 50 ? '🎉 Great! You get a 2% discount for using ≤50% of your limit!' : newUtilization <= 75 ? '✨ Nice! You get a 1% discount for using ≤75% of your limit!' : ''}\n\nWould you like to accept this offer?`;
-
-                    session.updatedLoanAmount = newAmount;
-
-                    if (redisInitialized) {
-                        await setChatSession(sid, session, 86400);
-                        await addChatMessage(sid, { role: 'bot', content: response });
-                        await publishChatEvent(sid, 'bot_response', { response, state: session.state, updatedLoanAmount: newAmount });
-                    }
-
-                    return res.json({
-                        ok: true,
-                        response,
-                        sessionId: sid,
-                        state: session.state,
-                        updatedLoanAmount: newAmount
-                    });
-                } else {
-                    response = `⚠️ Sorry ${name}, ₹${newAmount.toLocaleString()} exceeds your pre-approved limit.\n\n📊 Your Maximum Limit: ₹${preApprovedLimit.toLocaleString()}\n\nPlease choose an amount up to ₹${preApprovedLimit.toLocaleString()}.`;
-                }
-            } else {
-                response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
-            }
+            // ==================== PRIORITY 3: VECTOR SEARCH (Basic FAQ) ====================
         } else {
-            response = `Hi ${name}! Your current offer:\n\n💰 Applied: ₹${requestedAmount.toLocaleString()}\n📊 Maximum: ₹${preApprovedLimit.toLocaleString()}\n📈 Rate: ${currentRate}%\n\nSay "accept" to proceed, "negotiate" for better rates, or "change amount to X" to modify your loan amount.`;
-        }
+            // Bypass vector search for generic loan requests AND specific negotiation intents (let LLM handle them)
+            const isGenericLoanRequest = lower.includes('need a loan') ||
+                lower.includes('want a loan') ||
+                lower.includes('get a loan') ||
+                lower.includes('looking for a loan');
+
+            // Negotiation keywords that should trigger LLM instead of FAQ
+            const isNegotiationIntent = lower.includes('reduce') ||
+                lower.includes('lower') ||
+                lower.includes('discount') ||
+                lower.includes('too high') ||
+                lower.includes('negotiate') ||
+                lower.includes('change amount');
+
+            const vectorMatch = (isGenericLoanRequest || isNegotiationIntent) ? null : await searchBasicQuestions(message);
+
+            if (vectorMatch) {
+                // Build userData for template filling
+                const templateData = {
+                    name,
+                    loanAmount: requestedAmount,
+                    interestRate: session.finalRate || adjustedRate,
+                    creditScore: score,
+                    preApprovedLimit,
+                    maxEMI: preApprovedLimit ? Math.round(preApprovedLimit / 36) : 25000,
+                    monthlySalary: salary,
+                    phone: customerData?.phone || 'N/A',
+                    accountNumber: customerData?.accountNumber || 'N/A',
+                    loanPurpose: customerData?.loanPurpose || 'Personal',
+                    city: customerData?.city || 'N/A',
+                    currentRate: currentRate
+                };
+
+                response = fillAnswerTemplate(vectorMatch.answer, templateData);
+                console.log(`[Chat] ${name} | VectorDB match (score: ${vectorMatch.score.toFixed(3)}): "${vectorMatch.question}"`);
+
+                // ==================== PRIORITY 4 & 5: OFF-TOPIC GATE + LLM ====================
+            } else {
+                // --- Detect loan amount change intent ---
+                let amountChangeContext = '';
+                // detectedUpdatedAmount is declared in outer scope
+
+                // Check if user mentions a specific amount (supports: "60000", "2 lakh", "2L", "200k", "2,00,000")
+                const amountRegex = /(\d+(?:,\d+)*(?:\.\d+)?)\s*(lakh|lac|lakhs|lacs|thousand)?(?:\b)/i;
+                const shortUnitRegex = /(\d+(?:,\d+)*(?:\.\d+)?)\s*([lLkK])\b/;
+                const amountMatch = message.match(amountRegex);
+                const shortMatch = message.match(shortUnitRegex);
+
+                if (amountMatch || shortMatch) {
+                    let extractedNum = 0;
+
+                    if (amountMatch) {
+                        extractedNum = parseFloat(amountMatch[1].replace(/,/g, ''));
+                        const unitStr = (amountMatch[2] || '').toLowerCase();
+                        if (unitStr.includes('lakh') || unitStr.includes('lac')) {
+                            extractedNum *= 100000;
+                        } else if (unitStr.includes('thousand')) {
+                            extractedNum *= 1000;
+                        }
+                    }
+
+                    if (shortMatch && extractedNum === parseFloat(shortMatch[1].replace(/,/g, ''))) {
+                        const shortUnit = shortMatch[2].toLowerCase();
+                        if (shortUnit === 'l') extractedNum *= 100000;
+                        else if (shortUnit === 'k') extractedNum *= 1000;
+                    }
+
+                    const parsedAmount = Math.round(extractedNum);
+
+                    // Only treat as amount change if it looks like a loan amount (> 1000)
+                    if (parsedAmount >= 1000 && (lower.includes('change') || lower.includes('amount') || lower.includes('borrow') || lower.includes('want') || lower.includes('need') || lower.includes('reduce') || lower.includes('increase') || session.state === 'offered' || session.state === 'negotiating')) {
+                        if (parsedAmount <= preApprovedLimit) {
+                            // Calculate new rate based on utilization
+                            const newUtilization = (parsedAmount / preApprovedLimit) * 100;
+                            let newRate = baseRate;
+                            if (newUtilization <= 50) newRate = baseRate - 2;
+                            else if (newUtilization <= 75) newRate = baseRate - 1;
+
+                            session.finalRate = newRate;
+                            session.updatedLoanAmount = parsedAmount;
+                            detectedUpdatedAmount = parsedAmount;
+
+                            amountChangeContext = `\n\nSYSTEM NOTE: The customer wants to change their loan amount to ₹${parsedAmount.toLocaleString()}. This is WITHIN their pre-approved limit of ₹${preApprovedLimit.toLocaleString()}. The new interest rate based on ${newUtilization.toFixed(0)}% utilization is ${newRate.toFixed(1)}%. Confirm this change enthusiastically and tell them the updated details.`;
+
+                            console.log(`[Chat] ${name} | Amount change detected: ₹${parsedAmount.toLocaleString()} | New rate: ${newRate}%`);
+                        } else {
+                            amountChangeContext = `\n\nSYSTEM NOTE: The customer wants ₹${parsedAmount.toLocaleString()} but their max limit is ₹${preApprovedLimit.toLocaleString()}. Politely tell them the maximum they can get and suggest they choose a lower amount.`;
+                        }
+                    }
+                }
+
+                // ==================== OFF-TOPIC GATE (before LLM) ====================
+                // Refined Logic: 
+                // 1. STRONG keywords (loan, emi, interest) -> Pass immediately
+                // 2. CONTEXT keywords (bike, wedding) -> Must be paired with a financial term (buy, finance, fund, cost, price)
+
+                // Tier 1: Strong Banking/Finance terms (Pass immediately)
+                const strongBankingKeywords = [
+                    'loan', 'emi', 'interest', 'rate', 'credit', 'score', 'cibil',
+                    'salary', 'income', 'bank', 'account', 'tenure', 'repay',
+                    'prepay', 'foreclose', 'kyc', 'document', 'aadhaar', 'pan', 'disburse',
+                    'approve', 'application', 'apply', 'offer', 'negotiate', 'reduce', 'lower',
+                    'increase', 'finance', 'fund', 'borrow', 'lend', 'money', 'cash',
+                    'limit', 'pre-approved', 'preapproved', 'status', 'process',
+                    'accept', 'proceed', 'reject', 'cancel', 'reference', 'receipt',
+                    'blockchain', 'contract', 'installments', 'downpayment'
+                ];
+
+                // Tier 2: Context/Spending terms (Need to be combined with intent)
+                const contextKeywords = [
+                    // Home
+                    'flat', 'apartment', 'plot', 'land', 'property', 'renovation', 'builder', 'villa', 'housing', 'home',
+                    // Vehicle
+                    'bike', 'scooter', 'motorcycle', 'car', 'suv', 'sedan', 'vehicle', 'transport',
+                    // Education
+                    'college', 'school', 'university', 'tuition', 'fee', 'course', 'degree', 'abroad',
+                    // Business
+                    'startup', 'capital', 'shop', 'office', 'inventory', 'machinery', 'equipment', 'business',
+                    // Personal
+                    'wedding', 'marriage', 'vacation', 'travel', 'trip', 'holiday',
+                    'medical', 'surgery', 'emergency', 'laptop', 'mobile', 'gadget', 'furniture', 'gold', 'jewellery',
+                    // Actions
+                    'buy', 'purchase', 'invest', 'cost', 'price', 'plan'
+                ];
+
+                // Check 1: Does it contain a STRONG keyword?
+                const hasStrongKeyword = strongBankingKeywords.some(kw => lower.includes(kw));
+
+                // Check 2: Does it contain a CONTEXT keyword + some indication of "wanting/buying"?
+                // Actually, "I want to buy a bike" -> "buy" (context) + "bike" (context). 
+                // But "Best bike to buy" -> "buy" + "bike". 
+                // We need to distinguish "financial intent". 
+                // Let's stick to: Must have (Strong Keyword) OR (Context Keyword + "finance"/"fund"/"loan" implicit?)
+
+                // If user says "I want to buy a bike", we WANT to let it through because the LLM can sell a loan.
+                // If user says "Best bike to buy", the LLM should probably reject or pivot to "I can't recommend bikes, but I can fund it".
+                // Our system prompt handles the refusal ("If off-topic... say you can only help with banking").
+
+                // SO: We should be LENIENT here and let the LLM decide, BUT "Best bike to buy" is tricky.
+                // Let's allow (Strong) OR (Context + "buy"/"purchase"/"cost"/"invest").
+                // "Best bike to buy" -> contains "buy" + "bike". Matches.
+                // Passes to LLM. LLM sees "Best bike to buy". LLM Prompt says: "If off-topic... refuse."
+                // LLM output: "I'm a loan advisor, I don't know about bikes. But I can help you buy one with a loan!" -> This is ACCEPTABLE.
+
+                // The user's concern: "It is not a banking statement".
+                // If the gate is too loose, we waste LLM tokens on "Best bike".
+                // If too strict, we block "I want to buy a bike".
+
+                // COMPROMISE: 
+                // 1. Pass if has STRONG keyword.
+                // 2. Pass if has (Context Keyword) AND (Intent words like "want", "need", "looking for", "planning").
+                // "Best bike to buy" -> doesn't have "want"/"need" (usually). 
+                // "I want to buy a bike" -> has "want".
+
+                const intentWords = ['want', 'need', 'require', 'looking for', 'planning', 'finance', 'get', 'take', 'give'];
+
+                const hasContextMatches = contextKeywords.some(kw => lower.includes(kw));
+                const hasIntentMatch = intentWords.some(kw => lower.includes(kw));
+
+                // Allow greeting words to pass through only if they are the WHOLE message or short
+                const greetings = ['hello', 'hi', 'hey', 'start', 'help'];
+                const isGreeting = greetings.some(g => lower === g || (lower.includes(g) && lower.length < 20));
+
+                const allowedThroughGate = hasStrongKeyword || (hasContextMatches && hasIntentMatch) || isGreeting;
+
+                if (!allowedThroughGate && !amountChangeContext) {
+                    // No banking context at all — refuse without calling LLM
+                    const offTopicRefusals = [
+                        `Hey ${name}! 😄 I appreciate the curiosity, but I can only help with banking and loan queries. Want to discuss your loan offer?`,
+                        `${name}, that's outside my expertise! I'm your loan advisor — ask me about your rate, EMI, or application status. 💰`,
+                        `Interesting, ${name}! But I'm strictly a loan specialist. Let's talk about your pre-approved limit of ₹${preApprovedLimit.toLocaleString()} instead? 📋`,
+                        `${name}, I can only assist with banking and loan-related questions. Your current offer is at ${currentRate}% — want to negotiate? 📊`,
+                        `That's beyond my scope, ${name}! I'm here to help with your loan. Got questions about EMI, interest rate, or eligibility? 🏦`
+                    ];
+                    response = offTopicRefusals[Math.floor(Math.random() * offTopicRefusals.length)];
+                    console.log(`[Chat] ${name} | OFF-TOPIC blocked (no banking keywords): "${message.substring(0, 50)}..."`);
+                } else {
+                    // ==================== LLM CALL (only for banking-related queries) ====================
+                    try {
+
+                        // Get chat history for context
+                        let chatHistory = '';
+                        if (redisInitialized) {
+                            const history = await getChatHistory(sid, 6);
+                            chatHistory = history.map(m => `${m.role === 'user' ? 'Customer' : 'Advisor'}: ${m.content}`).join('\n');
+                        }
+
+                        // Construct the system prompt for a human-like Loan Officer
+                        const systemPrompt = `You are a friendly, warm, and professional loan advisor at a bank. Your name is "Advisor". You speak in a natural, human-like tone — not robotic. Be conversational, empathetic, and helpful.
+
+CUSTOMER CONTEXT:
+- Name: ${name}
+- Monthly Salary: ₹${salary.toLocaleString()}
+- Requested Loan: ₹${requestedAmount.toLocaleString()}
+- Pre-Approved Limit: ₹${preApprovedLimit.toLocaleString()}
+- Current Interest Rate: ${currentRate}%
+- Credit Score: ${score}/900
+- Session State: ${session.state}
+- Negotiations So Far: ${session.negotiationCount}
+
+NEGOTIATION RULES:
+- You can reduce the rate by up to 0.5% max per negotiation round.
+- The absolute floor rate is ${Math.max(adjustedRate - 1.5, 7)}%. NEVER go below this.
+- Maximum ${3 - session.negotiationCount} more negotiation rounds allowed.
+- If the customer asks to change the loan amount, help them but keep it within ₹${preApprovedLimit.toLocaleString()}.
+- If the customer wants to accept, congratulate them warmly.
+- If the message is NOT related to banking, loans, finance, or your services, DO NOT engage with the topic at all. Simply say you can only help with banking/loan queries and redirect.
+
+IMPORTANT:
+- Keep responses SHORT (2-4 sentences max for negotiation, slightly longer for explanations).
+- Use casual Indian English. You can use emojis sparingly.
+- If the customer asks something off-topic (weather, politics, history, sports, coding, general knowledge, etc.), NEVER acknowledge or comment on the off-topic subject. Just say "I can only help with banking and loan queries" and redirect to their loan.
+- ALWAYS respond in plain text. Do NOT return JSON.
+
+${chatHistory ? `RECENT CONVERSATION:\n${chatHistory}\n` : ''}${amountChangeContext}`;
+
+                        const fullPrompt = `${systemPrompt}\n\nCustomer: ${message}\n\nAdvisor:`;
+
+                        console.log(`[Chat] ${name} | Calling Llama 3.1 for response...`);
+                        const llmResponse = await callGemini(fullPrompt);
+                        response = llmResponse.trim();
+
+                        // Detect if the LLM decided to negotiate (update session)
+                        if (session.state === 'intro') {
+                            session.state = 'offered';
+                        }
+
+                        // Detect rate changes in LLM response
+                        const rateMatch = response.match(/(\d+\.?\d*)\s*%/g);
+                        if (rateMatch && (lower.includes('negotiate') || lower.includes('reduce') || lower.includes('lower'))) {
+                            session.state = 'negotiating';
+                            session.negotiationCount++;
+                            // Extract the last percentage mentioned as the new rate
+                            const rates = rateMatch.map(r => parseFloat(r));
+                            const newRate = rates[rates.length - 1];
+                            if (newRate && newRate >= Math.max(adjustedRate - 1.5, 7) && newRate <= baseRate) {
+                                session.finalRate = newRate.toFixed(1);
+                            }
+                        }
+
+                        console.log(`[Chat] ${name} | Llama 3.1 responded (${response.length} chars) | State: ${session.state}`);
+
+                    } catch (llmError) {
+                        console.error('[Chat] LLM Error:', llmError.message);
+
+                        // ==================== FALLBACK: Off-topic / Error Responses ====================
+                        const offTopicResponses = [
+                            `Hey ${name}! 😄 I'm flattered you'd ask me that, but I'm strictly a loan wizard. Let's talk EMIs instead?`,
+                            `Haha, nice try ${name}! I only speak the language of loans and interest rates. What can I help you with there? 💰`,
+                            `${name}, I wish I could help with that! But my expertise is limited to loans. Got any questions about your application? 📋`,
+                            `That's a great question, ${name}... for someone else! I'm your loan advisor. Want to know about your rate or EMI? 😊`,
+                            `Oh ${name}, you're testing me! 😂 I'm just a humble loan officer. Shall we discuss your pre-approved limit of ₹${preApprovedLimit.toLocaleString()}?`,
+                            `${name}, let's stay focused on what matters — your loan! Your current offer is at ${currentRate}%. Want to negotiate? 📊`,
+                            `I appreciate the curiosity, ${name}! But I'm laser-focused on getting you the best loan deal. What would you like to know? 🎯`,
+                            `${name}, I'd love to chat about that, but I'm a one-trick pony — loans! 🐴 Ask me about rates, EMIs, or your application status.`,
+                            `Interesting question, ${name}! Unfortunately, my brain is wired only for banking and loans. How can I help with your application? 🏦`,
+                            `${name}, I'm all about the numbers today! 📈 Your loan, your rate, your EMI — that's my world. What shall we discuss?`
+                        ];
+                        response = offTopicResponses[Math.floor(Math.random() * offTopicResponses.length)];
+                    }
+                } // end of else (banking query -> LLM)
+            } // end of off-topic gate (vectorMatch else)
+        } // end of outer else (main chat logic)
 
         // If accepted, store the application with EMI schedule
         if (session.state === 'accepted' && !session.applicationStored) {
@@ -1207,7 +1321,9 @@ app.post('/api/chat', async (req, res) => {
 
         console.log(`[Chat] ${name} | State: ${session.state} | Negotiation: ${session.negotiationCount}`);
 
-        res.json({ ok: true, response, sessionId: sid, state: session.state });
+        const finalResponse = { ok: true, response, sessionId: sid, state: session.state };
+        if (detectedUpdatedAmount) finalResponse.updatedLoanAmount = detectedUpdatedAmount;
+        res.json(finalResponse);
     } catch (err) {
         console.error('Chat error:', err);
         res.status(500).json({ error: err.message });

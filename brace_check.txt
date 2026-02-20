@@ -1,0 +1,81 @@
+ 772 d= 1         if (session.state === 'accepted') {
+ 773 d= 1             response = `Your loan application is already submitted! 🎉\n\n🔢 Reference ID:
+ 776 d= 1         } else if (lower.includes('yes') || lower.includes('accept') || lower.includes('pr
+ 777 d= 2             if (session.state === 'negotiating' || session.state === 'offered') {
+ 782 d= 2                 response = `✅ Congratulations ${name}! Your loan is approved!\n\n🔢 Refere
+ 783 d= 2             } else {
+ 785 d= 2                 response = `Hello ${name}! 👋\n\n📊 Credit Score: ${score}\n💰 Pre-Approve
+ 786 d= 1             }
+ 789 d= 1         } else {
+ 792 d= 2             if (vectorMatch) {
+ 794 d= 3                 const templateData = {
+ 807 d= 2                 };
+ 810 d= 2                 console.log(`[Chat] ${name} | VectorDB match (score: ${vectorMatch.score.t
+ 813 d= 2             } else {
+ 824 d= 3                 if (amountMatch || shortMatch) {
+ 827 d= 4                     if (amountMatch) {
+ 830 d= 5                         if (unitStr.includes('lakh') || unitStr.includes('lac')) {
+ 832 d= 5                         } else if (unitStr.includes('thousand')) {
+ 834 d= 4                         }
+ 835 d= 3                     }
+ 837 d= 4                     if (shortMatch && extractedNum === parseFloat(shortMatch[1].replace(/,
+ 841 d= 3                     }
+ 846 d= 4                     if (parsedAmount >= 1000 && (lower.includes('change') || lower.include
+ 847 d= 5                         if (parsedAmount <= preApprovedLimit) {
+ 858 d= 5                             amountChangeContext = `\n\nSYSTEM NOTE: The customer wants to 
+ 860 d= 5                             console.log(`[Chat] ${name} | Amount change detected: ₹${parse
+ 861 d= 5                         } else {
+ 862 d= 5                             amountChangeContext = `\n\nSYSTEM NOTE: The customer wants ₹${
+ 863 d= 4                         }
+ 864 d= 3                     }
+ 865 d= 2                 }
+ 889 d= 3                 if (!hasAnyBankingKeyword && !amountChangeContext) {
+ 892 d= 3                         `Hey ${name}! 😄 I appreciate the curiosity, but I can only help w
+ 893 d= 3                         `${name}, that's outside my expertise! I'm your loan advisor — ask
+ 894 d= 3                         `Interesting, ${name}! But I'm strictly a loan specialist. Let's t
+ 895 d= 3                         `${name}, I can only assist with banking and loan-related question
+ 896 d= 3                         `That's beyond my scope, ${name}! I'm here to help with your loan.
+ 899 d= 3                     console.log(`[Chat] ${name} | OFF-TOPIC blocked (no banking keywords):
+ 900 d= 3                 } else {
+ 902 d= 4                     try {
+ 906 d= 5                         if (redisInitialized) {
+ 908 d= 5                             chatHistory = history.map(m => `${m.role === 'user' ? 'Custome
+ 909 d= 4                         }
+ 915 d= 4 - Name: ${name}
+ 916 d= 4 - Monthly Salary: ₹${salary.toLocaleString()}
+ 917 d= 4 - Requested Loan: ₹${requestedAmount.toLocaleString()}
+ 918 d= 4 - Pre-Approved Limit: ₹${preApprovedLimit.toLocaleString()}
+ 919 d= 4 - Current Interest Rate: ${currentRate}%
+ 920 d= 4 - Credit Score: ${score}/900
+ 921 d= 4 - Session State: ${session.state}
+ 922 d= 4 - Negotiations So Far: ${session.negotiationCount}
+ 926 d= 4 - The absolute floor rate is ${Math.max(adjustedRate - 1.5, 7)}%. NEVER go below this.
+ 927 d= 4 - Maximum ${3 - session.negotiationCount} more negotiation rounds allowed.
+ 928 d= 4 - If the customer asks to change the loan amount, help them but keep it within ₹${preAppro
+ 938 d= 4 ${chatHistory ? `RECENT CONVERSATION:\n${chatHistory}\n` : ''}${amountChangeContext}`;
+ 940 d= 4                         const fullPrompt = `${systemPrompt}\n\nCustomer: ${message}\n\nAdv
+ 942 d= 4                         console.log(`[Chat] ${name} | Calling Llama 3.1 for response...`);
+ 947 d= 5                         if (session.state === 'intro') {
+ 949 d= 4                         }
+ 953 d= 5                         if (rateMatch && (lower.includes('negotiate') || lower.includes('r
+ 959 d= 6                             if (newRate && newRate >= Math.max(adjustedRate - 1.5, 7) && n
+ 961 d= 5                             }
+ 962 d= 4                         }
+ 964 d= 4                         console.log(`[Chat] ${name} | Llama 3.1 responded (${response.leng
+ 966 d= 4                     } catch (llmError) {
+ 971 d= 4                             `Hey ${name}! 😄 I'm flattered you'd ask me that, but I'm stri
+ 972 d= 4                             `Haha, nice try ${name}! I only speak the language of loans an
+ 973 d= 4                             `${name}, I wish I could help with that! But my expertise is l
+ 974 d= 4                             `That's a great question, ${name}... for someone else! I'm you
+ 975 d= 4                             `Oh ${name}, you're testing me! 😂 I'm just a humble loan offi
+ 976 d= 4                             `${name}, let's stay focused on what matters — your loan! Your
+ 977 d= 4                             `I appreciate the curiosity, ${name}! But I'm laser-focused on
+ 978 d= 4                             `${name}, I'd love to chat about that, but I'm a one-trick pon
+ 979 d= 4                             `Interesting question, ${name}! Unfortunately, my brain is wir
+ 980 d= 4                             `${name}, I'm all about the numbers today! 📈 Your loan, your 
+ 983 d= 3                     }
+ 984 d= 2                 } // end of else (banking query → LLM)
+ 985 d= 1             } // end of off-topic gate
+ 986 d= 0         } // end of vectorMatch else
+ 987 d=-1     } // end of outer else (not accepted, not acceptance intent)
+ 990 d= 0         if (session.state === 'accepted' && !session.applicationStored) {
