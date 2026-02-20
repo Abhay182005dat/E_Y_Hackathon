@@ -10,9 +10,14 @@ This platform leverages **AI (Ollama, LangChain, Gemini)** for intelligent under
 *   **Live Identity Verification**: Real-time camera capture for instant photo matching against KYC documents.
 *   **AI-Powered Credit Assessor**: Custom algorithm weighing income stability, debt-to-income, and historical banking behavior to generate an approval score (300-900).
 *   **Hybrid AI Loan Negotiation (Ollama + LangChain)**:
-    *   **Tier 1**: RAG-based Vector Search (Cosine Similarity) for instant, personalized FAQ answers using cached embeddings.
-    *   **Tier 2**: Llama 3.1 LLM for natural, constraint-based interest rate and EMI negotiation.
-    *   **Tier 3**: Smart "Off-Topic Gate" to politely refuse non-banking queries.
+    *   **Automated Verification:** Documents are analyzed (OCR) and checked for face mismatches via Jimp processing.
+    *   **Dual-Tier Conversational Agent (Off-chain):**
+        *   **Tier 1 (RAG):** Instant FAQ responses powered by VectorDB embeddings.
+        *   **Tier 2 (LLM):** Llama 3.1 LLM for natural negotiation of interest rates and EMIs within authorized constraints.
+    *   **Production-Grade LLM Security (Anti-Prompt Drilling):**
+        *   **Priority 0 Injection Classifier:** Regex-level interception of known malicious payloads (e.g., `system:`, `override`, `base64`) before they ever reach the core routing logic.
+        *   **Fortified System Prompt:** Explicit rules to reject role impersonation, instruction smuggling, encoded prompts, and polite social engineering hacks.
+        *   **Strict Backend Determinism:** The LLM serves purely as an explanation engine. Financial calculations (like interest rate finalization and boundary enforcement) are locked safely in deterministic, verifiable backend math—impossible for the LLM to override.
 *   **Resilient Web3 Tracking**: 
     *   Generates full master contracts on **IPFS / Pinata**.
     *   Anchors compact references to the **Sepolia Testnet**.
@@ -745,7 +750,26 @@ http://localhost:3001/otp-page.html
 
 ---
 
-### API Endpoints Reference:
+### 🛡️ Production-Grade LLM Security (Anti-Prompt Drilling)
+
+The platform implements a stringent 3-layer defense architecture to protect the backend from "Prompt Drilling" (advanced prompt injection, role impersonation, and instruction smuggling):
+
+1. **Priority 0 Pre-Classifier (Regex Filter)**
+   - All user input is scanned for raw attack vectors before routing.
+   - Blocks commands like `system:`, `developer:`, `override`, `base64`, `ignore previous`, entirely bypassing the LLM.
+
+2. **Fortified System Prompt (Context Isolation)**
+   - The LLM's system prompt strictly isolates `<system_instructions>` from `<user_input>`.
+   - Explicitly instructed to ignore "social engineering" (pity requests), hidden instructions implicitly embedded in data, and obfuscated string encodings.
+
+3. **Strict Backend Determinism (The Golden Rule)**
+   - **The LLM is an explanation engine, not a calculator.** 
+   - Even if an attacker successfully fools the LLM into saying *"I have approved a 0% interest rate"*, the system remains secure. 
+   - All financial logic (interest rate deductions, amount limits, floor clamping at `0.45%`) is hard-coded in the deterministic Express backend. The LLM's text output is never parsed for financial values.
+
+---
+
+## 📚 API Endpoints Reference:
 
 #### Authentication
 ```
