@@ -530,8 +530,26 @@ export default function ApplyPage() {
 
     // Step 1: Verify Documents
     const verifyDocuments = async () => {
-        setLoading(true);
         setError('');
+
+        // ── MANDATORY FIELD & DOCUMENT VALIDATION ──────────────────────────
+        const missing = [];
+
+        if (!formData.name?.trim())        missing.push('Full Name');
+        if (!formData.monthlySalary)        missing.push('Monthly Salary');
+        if (!formData.loanAmount)           missing.push('Loan Amount');
+        if (!documents.aadhaar)             missing.push('Aadhaar Card (document upload)');
+        if (!documents.pan)                 missing.push('PAN Card (document upload)');
+        if (!documents.bankStatement)       missing.push('Bank Statement (document upload)');
+        if (!documents.salarySlip)          missing.push('Salary Slip (document upload)');
+        if (!livePhoto)                     missing.push('Live Photo (selfie)');
+
+        if (missing.length > 0) {
+            setError('⚠️ Please complete the following before proceeding:\n' + missing.map(m => `• ${m}`).join('\n'));
+            return;
+        }
+
+        setLoading(true);
 
         try {
             const formDataAPI = new FormData();
@@ -731,7 +749,7 @@ export default function ApplyPage() {
 
                 {error && (
                     <div className="card" style={{ background: '#fee2e2', borderColor: 'var(--error)', marginBottom: '24px', padding: '16px' }}>
-                        <p style={{ color: 'var(--error)' }}>⚠️ {error}</p>
+                        <p style={{ color: 'var(--error)', whiteSpace: 'pre-wrap' }}>⚠️ {error}</p>
                     </div>
                 )}
 
@@ -743,7 +761,7 @@ export default function ApplyPage() {
                         </div>
                         <div style={formGridStyle}>
                             <div className="input-group">
-                                <label>Full Name</label>
+                                <label>Full Name <span style={{color:'#f87171'}}>*</span></label>
                                 <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} disabled />
                             </div>
                             <div className="input-group">
@@ -755,12 +773,12 @@ export default function ApplyPage() {
                                 <input className="form-input" name="pan" value={formData.pan} onChange={handleInputChange} placeholder="ABCDE1234F" />
                             </div>
                             <div className="input-group">
-                                <label>Monthly Salary (₹)</label>
-                                <input className="form-input" type="number" name="monthlySalary" value={formData.monthlySalary} onChange={handleInputChange} placeholder="50000" />
+                                <label>Monthly Salary (₹) <span style={{color:'#f87171'}}>*</span></label>
+                                <input className="form-input" type="number" name="monthlySalary" value={formData.monthlySalary} onChange={handleInputChange} placeholder="50000" style={!formData.monthlySalary ? {borderColor:'rgba(248,113,113,0.5)'} : {}} />
                             </div>
                             <div className="input-group">
-                                <label>Loan Amount (₹)</label>
-                                <input className="form-input" type="number" name="loanAmount" value={formData.loanAmount} onChange={handleInputChange} placeholder="500000" />
+                                <label>Loan Amount (₹) <span style={{color:'#f87171'}}>*</span></label>
+                                <input className="form-input" type="number" name="loanAmount" value={formData.loanAmount} onChange={handleInputChange} placeholder="500000" style={!formData.loanAmount ? {borderColor:'rgba(248,113,113,0.5)'} : {}} />
                             </div>
                             <div className="input-group">
                                 <label>City</label>
@@ -774,7 +792,11 @@ export default function ApplyPage() {
                                 { key: 'bankStatement', label: 'Bank Statement', icon: '🏦' },
                                 { key: 'salarySlip', label: 'Salary Slip', icon: '💰' }
                             ].map(doc => (
-                                <label key={doc.key} className="document-card" style={documentCardStyle}>
+                                <label key={doc.key} className="document-card" style={{
+                                    ...documentCardStyle,
+                                    borderColor: documents[doc.key] ? 'rgba(34,197,94,0.6)' : 'rgba(248,113,113,0.5)',
+                                    borderStyle: 'solid'
+                                }}>
                                     <input
                                         type="file"
                                         accept="image/*,.pdf"
@@ -782,11 +804,16 @@ export default function ApplyPage() {
                                         style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
                                     />
                                     <span style={documentIconStyle}>{doc.icon}</span>
-                                    <p style={{ fontWeight: 500 }}>{documents[doc.key]?.name || `Upload ${doc.label}`}</p>
-                                    {documents[doc.key] && (
+                                    <p style={{ fontWeight: 500 }}>
+                                        {documents[doc.key]?.name || `Upload ${doc.label}`}
+                                        {!documents[doc.key] && <span style={{color:'#f87171', marginLeft:'4px'}}>*</span>}
+                                    </p>
+                                    {documents[doc.key] ? (
                                         <span className="badge badge-success" style={{ display: 'inline-block', marginTop: '8px', padding: '4px 8px', borderRadius: '4px', background: 'var(--success)', color: '#fff', fontSize: '12px' }}>
                                             ✓ Uploaded
                                         </span>
+                                    ) : (
+                                        <span style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>Required</span>
                                     )}
                                 </label>
                             ))}
@@ -801,8 +828,8 @@ export default function ApplyPage() {
                             marginBottom: '20px',
                             textAlign: 'center'
                         }}>
-                            <h3 style={{ margin: '0 0 12px', color: '#fff', fontSize: '16px' }}>📸 Live Photo Verification</h3>
-                            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>Take a selfie for identity verification</p>
+                            <h3 style={{ margin: '0 0 12px', color: '#fff', fontSize: '16px' }}>📸 Live Photo Verification <span style={{color:'#f87171'}}>*</span></h3>
+                            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>Take a selfie for identity verification — <strong style={{color:'#fca5a5'}}>required</strong></p>
 
                             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
@@ -882,7 +909,7 @@ export default function ApplyPage() {
                         </div>
 
                         <div style={infoStripStyle}>
-                            <strong>Instant verification</strong> • identity and income files are matched against secure data sources in under 2 minutes.
+                            <strong>All fields marked <span style={{color:'#f87171'}}>*</span> are mandatory.</strong> Your name and salary will be cross-verified against your uploaded documents. A salary mismatch of 20% or more will reject the application.
                         </div>
                         <button
                             className="btn btn-primary"

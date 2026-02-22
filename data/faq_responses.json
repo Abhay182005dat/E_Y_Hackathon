@@ -1,0 +1,103 @@
+{
+  "bankInfo": {
+    "name": "EY BFSI Digital Bank",
+    "tagline": "Empowering Financial Futures",
+    "workingHours": "Monday to Saturday, 9:00 AM – 6:00 PM",
+    "customerCare": "1800-555-EYBANK (toll-free)",
+    "email": "support@eybfsi.in",
+    "website": "www.eybfsi.in",
+    "headquarters": "Mumbai, Maharashtra, India",
+    "established": "2010",
+    "regulatedBy": "Reserve Bank of India (RBI)"
+  },
+
+  "bankFAQs": [
+    {
+      "keywords": ["which bank", "what bank", "bank name", "who are you", "your bank"],
+      "answer": "We're EY BFSI Digital Bank — a next-gen, fully digital bank regulated by the Reserve Bank of India. We specialise in instant personal loans, seamless KYC, and AI-powered credit assessments. Our goal? To make borrowing simple, fair, and transparent for every Indian."
+    },
+    {
+      "keywords": ["working hours", "office hours", "open", "timing", "when can i call"],
+      "answer": "Our customer support is available Monday to Saturday, 9:00 AM to 6:00 PM IST. You can also reach us 24×7 through this chat for loan-related queries!"
+    },
+    {
+      "keywords": ["contact", "customer care", "helpline", "phone number", "call", "reach you"],
+      "answer": "You can reach us at our toll-free number 1800-555-EYBANK or email us at support@eybfsi.in. For urgent loan concerns, this AI chat is the fastest way to get help!"
+    },
+    {
+      "keywords": ["how long", "how much time", "processing time", "how fast", "quick"],
+      "answer": "Our AI-powered process is super quick! Document upload and verification takes about 5–10 minutes. Once you accept the offer, disbursement usually happens within 24–48 hours. It's one of the fastest in the industry!"
+    },
+    {
+      "keywords": ["safe", "secure", "data privacy", "trust", "security"],
+      "answer": "Absolutely! Your data is 100% secure. We use blockchain technology for immutable audit trails, AES-256 encryption for all documents, and our systems are RBI-compliant. Your privacy is our top priority."
+    },
+    {
+      "keywords": ["prepay", "foreclose", "early repayment", "close loan", "prepayment"],
+      "answer": "Yes, you can foreclose your loan anytime! For loans closed within the first 12 months, a nominal 2% foreclosure charge applies. After 12 months, it's completely free. We believe in financial freedom for our customers."
+    },
+    {
+      "keywords": ["documents required", "what documents", "papers needed", "kyc documents"],
+      "answer": "We keep it simple — you just need:\n• Aadhaar Card (for identity & address proof)\n• PAN Card (for tax verification)\n• Last 3 months' bank statements\n• Latest salary slip\n• A live selfie photo for face verification\n\nAll documents are uploaded digitally — no physical visits needed!"
+    },
+    {
+      "keywords": ["minimum salary", "eligible", "eligibility", "who can apply", "qualify"],
+      "answer": "Our eligibility criteria are quite inclusive:\n• Age: 21–60 years\n• Minimum monthly income: ₹20,000\n• Employment: Salaried or self-employed\n• Valid Aadhaar & PAN required\n\nIf your salary is ₹25,000+ you have a very strong chance of approval!"
+    },
+    {
+      "keywords": ["loan tenure", "repayment period", "how many months", "how many years"],
+      "answer": "We offer flexible loan tenures ranging from 12 months (1 year) to 60 months (5 years). The standard tenure we calculate your offer on is 36 months, but you can discuss adjustments with our team post-approval."
+    },
+    {
+      "keywords": ["processing fee", "charges", "hidden charges", "fees"],
+      "answer": "We charge a one-time processing fee of 1–2% of the loan amount (deducted upfront). There are no hidden charges! The full fee structure will be clearly shown in your sanction letter before you accept."
+    },
+    {
+      "keywords": ["collateral", "security", "guarantee", "asset"],
+      "answer": "Great news — our personal loans are 100% unsecured! You don't need to pledge any asset or provide a guarantor. Your creditworthiness and income are all we need."
+    },
+    {
+      "keywords": ["what is approval score", "approval score mean", "how is score calculated"],
+      "answer": "Your Approval Score (similar to CIBIL) is calculated on a scale of 300–900. It considers:\n• Income stability (25%)\n• Debt-to-income ratio (25%)\n• Loan feasibility (20%)\n• Banking behaviour from your statement (15%)\n• Employment stability (15%)\n\nA score above 650 is needed for loan approval. Higher is always better!"
+    },
+    {
+      "keywords": ["can i increase", "increase amount", "more money", "higher loan", "increase loan", "get more loan", "raise loan", "loan limit increase"],
+      "answer": "Your loan amount is determined strictly by your credit profile, income, and our AI-based credit assessment — it cannot exceed your pre-approved limit. This limit is set to ensure you borrow only what is comfortably repayable. If you need a higher amount in the future, we recommend improving your credit score and reapplying after 6 months. We're always happy to reassess!"
+    },
+    {
+      "keywords": ["why not more loan", "why low amount", "amount too low", "deserve more", "want bigger loan", "need more money"],
+      "answer": "I completely understand the frustration! The pre-approved amount is calculated based on your income, existing EMIs, and credit behaviour. It is essentially the maximum safe borrowing limit our system has computed for you. Borrowing beyond it could strain your finances. Our goal is to make sure you succeed financially — not just approve loans!"
+    },
+    {
+      "keywords": ["reduce interest", "lower interest rate", "negotiate rate", "can i get lower rate", "reduce my rate", "lower my interest", "interest too high", "discount on interest", "interest rate reduce"],
+      "answer": "Yes! You can negotiate your interest rate — but only up to a point. Our system allows a maximum of 3 rounds of negotiation, with each round reducing the rate by 0.5%. So the maximum reduction possible is 1.5% off your base rate. Once you've used all 3 rounds (or accepted the rate), it gets locked permanently in the system and cannot be changed further. Type something like 'can you reduce the rate?' to start negotiating!"
+    },
+    {
+      "keywords": ["how many times can i negotiate", "negotiation limit", "how many rounds", "rate negotiation rounds", "how many attempts rate"],
+      "answer": "You get exactly 3 negotiation rounds for your interest rate. Each round reduces the rate by 0.5%, giving you a maximum discount of 1.5%. After 3 rounds, the rate is permanently locked — no further reductions are possible. So use your rounds wisely! 😊"
+    },
+    {
+      "keywords": ["why is interest rate high", "rate seems high", "interest too much", "rate unfair"],
+      "answer": "Your interest rate is calculated based on your Approval Score (300–900 scale). A higher score means a lower rate. Factors like income stability, existing debt, and banking behaviour all influence it. The good news: you have up to 3 negotiation rounds to reduce it by 0.5% each — giving you up to a 1.5% discount. You can type 'reduce my rate' to start!"
+    },
+    {
+      "keywords": ["can i apply for more later", "reapply later", "apply again future", "future loan increase", "loan next time"],
+      "answer": "Absolutely! Once your current loan is successfully repaid (or after 6 months of on-time EMI payments), you become eligible for a fresh, potentially higher loan. Your credit profile gets re-evaluated, and with a better repayment history, you're likely to receive a higher pre-approved limit next time. We reward good repayment behaviour!"
+    },
+    {
+      "keywords": ["emi missed", "late payment", "miss emi", "default"],
+      "answer": "If you miss an EMI, a late payment penalty of 2% per month on the overdue amount applies. We recommend setting up auto-debit to avoid this. If you're facing a genuine hardship, please call us — we have restructuring options for difficult situations."
+    }
+  ],
+
+  "offTopicResponses": [
+    "Ha, I wish I could help with that! But I'm a loan advisor bot — I live and breathe EMIs and interest rates 😄. Ask me anything about your loan application!",
+    "That's an interesting question, but it's a bit outside my lane! I'm your personal loan assistant here. Want to check your loan offer or calculate your EMI instead?",
+    "I'm going to have to pass on that one — I only have a PhD in loan processing 🎓. Is there anything loan-related I can help you with today?",
+    "Ooh, that's outside my expertise! I'm best at crunching numbers for your loan 💰. Can I help you with your application, EMI schedule, or interest rate details?",
+    "Between you and me, I'm not the best at off-topic stuff 😅. But if you want to know about your loan approval, credit score, or repayment — I'm your guy!",
+    "I appreciate the curiosity, but loan advice is my superpower! 🦸 Let me know if you want to proceed with your offer or have any loan-related doubts.",
+    "Nice try, but my brain is hardwired for loans, EMIs, and credit scores 🧠. Anything loan-related I can sort out for you today?",
+    "I only speak 'loan language' fluently 😂. Drop me a loan question and I'll give you a brilliant answer! What would you like to know?"
+  ]
+}

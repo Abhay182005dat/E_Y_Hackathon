@@ -735,7 +735,7 @@ function performFraudCheck(documents, customerData = null) {
         const diff = Math.abs(enteredSalary - extractedSalary);
         const percentDiff = (diff / extractedSalary) * 100;
 
-        if (percentDiff > 20) { // More than 20% difference
+        if (percentDiff >= 20) { // 20% or more difference → REJECTED
             issues.push({
                 type: 'USER_SALARY_MISMATCH',
                 severity: 'high',
@@ -758,6 +758,18 @@ function performFraudCheck(documents, customerData = null) {
             console.log(`   Salary Slip: ₹${extractedSalary}`);
             console.log(`   Difference: ${percentDiff.toFixed(1)}% (within 20% threshold)`);
         }
+    }
+
+    // Check 6: Salary slip MUST be present (mandatory document)
+    // If salary slip was not uploaded / could not be parsed, reject immediately
+    if (customerData?.monthlySalary && !salarySlip?.netSalary) {
+        issues.push({
+            type: 'SALARY_SLIP_MISSING',
+            severity: 'high',
+            message: 'Salary slip could not be parsed or was not uploaded. Income verification failed — application rejected.'
+        });
+        riskScore += 40;
+        console.log('\n❌ SALARY SLIP MISSING/UNREADABLE — application will be rejected');
     }
 
     return {

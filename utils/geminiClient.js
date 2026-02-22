@@ -4,7 +4,7 @@ require('dotenv').config();
 
 // Ollama API configuration
 // Default Ollama endpoint: http://localhost:11434
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_BASE_URL = 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1';
 
 /**
@@ -13,26 +13,32 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1';
  * 
  * To set up:
  * 1. Install Ollama: https://ollama.com
- * 2. Pull a model: ollama pull llama3.1
+ * 2. Pull a model: ollama pull llama3.1 
  * 3. Start Ollama (it runs automatically on install)
  */
-async function callGemini(prompt) {
-    const url = `${OLLAMA_BASE_URL}/api/generate`;
+async function callGemini(messages, apiOptions = {}) {
+    const url = `${OLLAMA_BASE_URL}/api/chat`;
 
     let retries = 3;
     let delay = 1000;
 
     for (let i = 0; i < retries; i++) {
         try {
+            // Check if messages is an array (chat format) or a legacy string prompt
+            const chatMessages = Array.isArray(messages)
+                ? messages
+                : [{ role: 'user', content: messages }];
+
             const response = await axios.post(url, {
                 model: OLLAMA_MODEL,
-                prompt: prompt,
-                stream: false
+                messages: chatMessages,
+                stream: false,
+                options: apiOptions
             }, {
                 timeout: 60000 // 60 second timeout for local models
             });
 
-            return response.data.response;
+            return response.data.message.content;
         } catch (error) {
             const status = error.response ? error.response.status : undefined;
             const isConnectionError = error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND';
